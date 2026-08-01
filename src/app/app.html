@@ -140,6 +140,10 @@
             <dt>Density mode</dt>
             <dd>{{ timelineStore.timelineState().densityMode }}</dd>
           </div>
+          <div>
+            <dt>Hovered timestamp</dt>
+            <dd>{{ timelineStore.timelineState().hoveredTimestampMs || 'none' }}</dd>
+          </div>
         </dl>
       } @else {
         <p class="workspace-message">Select a camera to load recording metadata.</p>
@@ -186,7 +190,54 @@
       <app-timeline-canvas
         [loadedWindow]="timelineStore.timelineState().loadedWindow"
         [selectedReviewEventId]="reviewStore.reviewState().selectedEventId"
+        [hoveredTimestamp]="timelineStore.timelineState().hoveredTimestampMs"
+        [previewFrame]="timelineStore.timelineState().previewFrame"
+        (hoverTimestampChange)="handleTimelineHover($event)"
+        (timelineSelect)="handleTimelineSelect($event)"
+        (reviewEventSelect)="handleTimelineReviewEventSelect($event)"
       />
+    </div>
+  </section>
+
+  <section class="timeline-visualization" aria-label="Playback panel">
+    <div class="workspace-panel playback-panel">
+      <p class="section-label">Playback resolution</p>
+      <h2>Selected playback target</h2>
+
+      @if (playbackStore.playbackState().targetTimestampMs; as targetTimestampMs) {
+        <dl>
+          <div>
+            <dt>Target timestamp</dt>
+            <dd>{{ targetTimestampMs }}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{{ playbackStore.playbackState().playerStatus }}</dd>
+          </div>
+          @if (playbackStore.playbackState().resolvedSource; as resolvedSource) {
+            <div>
+              <dt>Transport</dt>
+              <dd>{{ resolvedSource.transport }}</dd>
+            </div>
+            <div>
+              <dt>Playable range</dt>
+              <dd>
+                {{ resolvedSource.playableRangeStartMs }} to {{ resolvedSource.playableRangeEndMs }}
+              </dd>
+            </div>
+            <div>
+              <dt>Resolved URL</dt>
+              <dd class="breakable">{{ resolvedSource.resolvedUrl }}</dd>
+            </div>
+          }
+        </dl>
+
+        @if (playbackStore.playbackState().error; as error) {
+          <p class="workspace-message error playback-error">{{ error.message }}</p>
+        }
+      } @else {
+        <p class="workspace-message">Click the timeline to resolve playback for a timestamp.</p>
+      }
     </div>
   </section>
 

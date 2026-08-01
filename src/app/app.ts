@@ -4,6 +4,7 @@ import { RouterOutlet } from '@angular/router';
 
 import { RUNTIME_CONFIG } from './core/config/runtime-config.token';
 import { CameraWorkspaceStore } from './features/camera-workspace/state/camera-workspace.store';
+import { PlaybackStore } from './features/playback/state/playback.store';
 import { ReviewStore } from './features/review-overlay/state/review.store';
 import { TimelineCanvasComponent } from './features/timeline/components/timeline-canvas.component';
 import { TimelineStore } from './features/timeline/state/timeline.store';
@@ -18,11 +19,25 @@ export class App {
   protected readonly title = signal('Camera Scroll');
   protected readonly runtimeConfig = inject(RUNTIME_CONFIG);
   protected readonly cameraWorkspaceStore = inject(CameraWorkspaceStore);
+  protected readonly playbackStore = inject(PlaybackStore);
   protected readonly reviewStore = inject(ReviewStore);
   protected readonly timelineStore = inject(TimelineStore);
 
   protected selectReviewEvent(eventId: string | null): void {
     this.reviewStore.selectEvent(eventId);
+
+    if (!eventId) {
+      return;
+    }
+
+    const selectedEvent = this.reviewStore
+      .reviewState()
+      .events.find((reviewEvent) => reviewEvent.id === eventId);
+
+    if (selectedEvent) {
+      this.playbackStore.setTargetTimestamp(selectedEvent.startMs);
+      this.timelineStore.setScrubTimestamp(selectedEvent.startMs);
+    }
   }
 
   constructor() {
@@ -31,5 +46,18 @@ export class App {
 
   protected selectCamera(cameraId: string): void {
     this.cameraWorkspaceStore.selectCamera(cameraId);
+  }
+
+  protected handleTimelineHover(timestampMs: number | null): void {
+    this.timelineStore.setHoveredTimestamp(timestampMs);
+  }
+
+  protected handleTimelineSelect(timestampMs: number): void {
+    this.timelineStore.setScrubTimestamp(timestampMs);
+    this.playbackStore.setTargetTimestamp(timestampMs);
+  }
+
+  protected handleTimelineReviewEventSelect(eventId: string | null): void {
+    this.reviewStore.selectEvent(eventId);
   }
 }

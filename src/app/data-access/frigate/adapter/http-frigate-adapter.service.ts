@@ -108,13 +108,121 @@ export class HttpFrigateAdapter implements FrigateAdapter {
   }
 
   async getPreviewFrame(_input: GetPreviewFrameInput): Promise<PreviewFrame | null> {
-    return null;
+    if (!this.baseUrl) {
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      camera: _input.cameraId,
+      timestamp: this.toEpochSeconds(_input.timestampMs)
+    });
+
+    if (_input.width) {
+      params.set('width', String(_input.width));
+    }
+
+    if (_input.height) {
+      params.set('height', String(_input.height));
+    }
+
+    if (this.runtimeConfig.deploymentMode === 'proxy') {
+      try {
+        const response = await this.fetchJson<{ imageUrl?: string; width?: number; height?: number }>(
+          this.buildUrl('/api/preview-frame', params)
+        );
+
+        if (response.imageUrl) {
+          return {
+            cameraId: _input.cameraId,
+            timestampMs: _input.timestampMs,
+            imageUrl: this.resolveMediaUrl(response.imageUrl),
+            width: response.width,
+            height: response.height
+          };
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    return {
+      cameraId: _input.cameraId,
+      timestampMs: _input.timestampMs,
+      imageUrl: this.buildUrl('/api/preview-frame', params),
+      width: _input.width,
+      height: _input.height
+    };
   }
 
   async resolvePlaybackSource(
-    _input: ResolvePlaybackSourceInput
+    input: ResolvePlaybackSourceInput
   ): Promise<PlaybackSource | null> {
-    return null;
+    if (!this.baseUrl) {
+      return null;
+    }
+
+    if (this.runtimeConfig.deploymentMode === 'proxy') {
+      try {
+        const params = new URLSearchParams({
+          camera: input.cameraId,
+          timestamp: this.toEpochSeconds(input.timestampMs)
+        });
+
+        const response = await this.fetchJson<{
+          url?: string;
+          startMs?: number | string;
+          endMs?: number | string;
+          transport?: PlaybackSource['transport'];
+        }>(this.buildUrl('/api/playback-source', params));
+
+        if (response.url) {
+          return {
+            cameraId: input.cameraId,
+            requestedTimestampMs: input.timestampMs,
+            resolvedUrl: this.resolveMediaUrl(response.url),
+            playableRangeStartMs: this.toEpochMilliseconds(response.startMs) || input.timestampMs,
+            playableRangeEndMs: this.toEpochMilliseconds(response.endMs) || input.timestampMs,
+            transport: response.transport || 'unknown'
+          };
+        }
+      } catch {
+        // Fall back to recording-based resolution below.
+      }
+    }
+
+    const startMs = input.timestampMs - 3_600_000;
+    const endMs = input.timestampMs + 3_600_000;
+    const recordings = await this.getRecordings({
+      cameraId: input.cameraId,
+      startMs,
+      endMs
+    });
+
+    const containingSegment = recordings.find(
+      (recording) => recording.startMs <= input.timestampMs && recording.endMs >= input.timestampMs
+    );
+
+    const nearestSegment =
+      containingSegment ||
+      recordings
+        .slice()
+        .sort(
+          (left, right) =>
+            Math.abs(left.startMs - input.timestampMs) - Math.abs(right.startMs - input.timestampMs)
+        )[0];
+
+    if (!nearestSegment || !nearestSegment.mediaPath) {
+      return null;
+    }
+
+    return {
+      cameraId: input.cameraId,
+      requestedTimestampMs: input.timestampMs,
+      resolvedUrl: this.resolveMediaUrl(nearestSegment.mediaPath),
+      playableRangeStartMs: nearestSegment.startMs,
+      playableRangeEndMs: nearestSegment.endMs,
+      transport: 'mp4'
+    };
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
@@ -158,6 +266,18 @@ export class HttpFrigateAdapter implements FrigateAdapter {
   private buildUrl(path: string, params?: URLSearchParams): string {
     const url = `${this.baseUrl}${path}`;
     return params ? `${url}?${params.toString()}` : url;
+  }
+
+  private resolveMediaUrl(path: string): string {
+    if (/^https?:\/\//.test(path)) {
+      return path;
+    }
+
+    if (path.startsWith('/')) {
+      return `${this.baseUrl}${path}`;
+    }
+
+    return `${this.baseUrl}/${path}`;
   }
 
   private mapCamera(cameraId: string, camera: FrigateCameraDto): CameraSummary {

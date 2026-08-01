@@ -2,6 +2,7 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 
 import { FRIGATE_ADAPTER } from '../../../data-access/frigate/adapter/frigate-adapter.token';
 import type {
+  PreviewFrame,
   RecordingSegment,
   ReviewEvent,
   TimelineWindow
@@ -18,6 +19,8 @@ export type TimelineState = {
   hoveredTimestampMs: number | null;
   scrubTimestampMs: number | null;
   pendingPreviewTimestampMs: number | null;
+  previewStatus: 'idle' | 'loading' | 'ready' | 'error';
+  previewFrame: PreviewFrame | null;
   densityMode: TimelineDensityMode;
   reviewEventCounts: Record<string, number>;
   error: UiError | null;
@@ -29,6 +32,8 @@ export const initialTimelineState: TimelineState = {
   hoveredTimestampMs: null,
   scrubTimestampMs: null,
   pendingPreviewTimestampMs: null,
+  previewStatus: 'idle',
+  previewFrame: null,
   densityMode: 'medium',
   reviewEventCounts: {},
   error: null
@@ -42,6 +47,7 @@ export class TimelineStore {
 
   private readonly state = signal<TimelineState>(initialTimelineState);
   private lastRequestKey: string | null = null;
+  private lastPreviewKey: string | null = null;
 
   readonly timelineState = this.state.asReadonly();
 
@@ -69,6 +75,29 @@ export class TimelineStore {
         workspace.visibleRangeStartMs,
         workspace.visibleRangeEndMs
       );
+    });
+
+    effect(() => {
+      const workspace = this.cameraWorkspaceStore.cameraWorkspace();
+      const pendingPreviewTimestampMs = this.state().pendingPreviewTimestampMs;
+
+      if (!workspace.selectedCameraId || !pendingPreviewTimestampMs) {
+        this.state.update((state) => ({
+          ...state,
+          previewStatus: 'idle',
+          previewFrame: null
+        }));
+        return;
+      }
+
+      const previewKey = `${workspace.selectedCameraId}:${pendingPreviewTimestampMs}`;
+
+      if (previewKey === this.lastPreviewKey) {
+        return;
+      }
+
+      this.lastPreviewKey = previewKey;
+      void this.loadPreviewFrame(workspace.selectedCameraId, pendingPreviewTimestampMs);
     });
   }
 
@@ -113,6 +142,49 @@ export class TimelineStore {
           message: 'Unable to load recording metadata for the selected camera.',
           retryable: true
         }
+      }));
+    }
+  }
+
+  setHoveredTimestamp(timestampMs: number | null): void {
+    this.state.update((state) => ({
+      ...state,
+      hoveredTimestampMs: timestampMs,
+      pendingPreviewTimestampMs: timestampMs
+    }));
+  }
+
+  setScrubTimestamp(timestampMs: number | null): void {
+    this.state.update((state) => ({
+      ...state,
+      scrubTimestampMs: timestampMs
+    }));
+  }
+
+  private async loadPreviewFrame(cameraId: string, timestampMs: number): Promise<void> {
+    this.state.update((state) => ({
+      ...state,
+      previewStatus: 'loading'
+    }));
+
+    try {
+      const previewFrame = await this.frigateAdapter.getPreviewFrame({
+        cameraId,
+        timestampMs,
+        width: 320,
+        height: 180
+      });
+
+      this.state.update((state) => ({
+        ...state,
+        previewStatus: previewFrame ? 'ready' : 'idle',
+        previewFrame
+      }));
+    } catch {
+      this.state.update((state) => ({
+        ...state,
+        previewStatus: 'error',
+        previewFrame: null
       }));
     }
   }

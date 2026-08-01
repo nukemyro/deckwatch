@@ -4,10 +4,11 @@ import {
   ElementRef,
   ViewChild,
   effect,
-  input
+  input,
+  output
 } from '@angular/core';
 
-import type { TimelineWindow } from '../../../data-access/frigate/adapter/frigate-adapter';
+import type { PreviewFrame, ReviewEvent, TimelineWindow } from '../../../data-access/frigate/adapter/frigate-adapter';
 
 @Component({
   selector: 'app-timeline-canvas',
@@ -15,6 +16,16 @@ import type { TimelineWindow } from '../../../data-access/frigate/adapter/frigat
   template: `
     <div class="timeline-frame">
       <canvas #canvas class="timeline-canvas" aria-label="Timeline visualization"></canvas>
+      @if (hoveredTimestamp() !== null) {
+        <div class="timeline-tooltip" [style.left.%]="tooltipLeft()">
+          @if (previewFrame()?.imageUrl; as imageUrl) {
+            <img [src]="imageUrl" alt="Preview frame" />
+          } @else {
+            <div class="timeline-tooltip-placeholder">Preview unavailable</div>
+          }
+          <p>{{ hoveredTimestamp() }}</p>
+        </div>
+      }
       <div class="timeline-legend">
         <span><i class="segment"></i> Recording segment</span>
         <span><i class="gap"></i> Gap</span>
@@ -28,12 +39,50 @@ import type { TimelineWindow } from '../../../data-access/frigate/adapter/frigat
       border-radius: 1rem;
       background: linear-gradient(180deg, rgba(255, 253, 250, 0.95), rgba(244, 248, 248, 0.95));
       padding: 1rem;
+      position: relative;
     }
 
     .timeline-canvas {
       display: block;
       width: 100%;
       height: 180px;
+    }
+
+    .timeline-tooltip {
+      position: absolute;
+      top: 0.95rem;
+      transform: translateX(-50%);
+      width: 180px;
+      border: 1px solid rgba(23, 49, 59, 0.12);
+      border-radius: 0.85rem;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 18px 40px rgba(35, 58, 64, 0.18);
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .timeline-tooltip img,
+    .timeline-tooltip-placeholder {
+      display: block;
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+      background: #e4eded;
+    }
+
+    .timeline-tooltip-placeholder {
+      display: grid;
+      place-items: center;
+      color: rgba(23, 49, 59, 0.64);
+      font-size: 0.9rem;
+    }
+
+    .timeline-tooltip p {
+      margin: 0;
+      padding: 0.55rem 0.7rem;
+      color: #17313b;
+      font-size: 0.9rem;
+      font-weight: 600;
     }
 
     .timeline-legend {
@@ -75,6 +124,11 @@ import type { TimelineWindow } from '../../../data-access/frigate/adapter/frigat
 export class TimelineCanvasComponent implements AfterViewInit {
   readonly loadedWindow = input<TimelineWindow | null>(null);
   readonly selectedReviewEventId = input<string | null>(null);
+  readonly hoveredTimestamp = input<number | null>(null);
+  readonly previewFrame = input<PreviewFrame | null>(null);
+  readonly hoverTimestampChange = output<number | null>();
+  readonly timelineSelect = output<number>();
+  readonly reviewEventSelect = output<string | null>();
 
   @ViewChild('canvas') private canvasRef?: ElementRef<HTMLCanvasElement>;
 
@@ -84,6 +138,8 @@ export class TimelineCanvasComponent implements AfterViewInit {
     effect(() => {
       this.loadedWindow();
       this.selectedReviewEventId();
+      this.hoveredTimestamp();
+      this.previewFrame();
 
       if (this.isViewReady) {
         queueMicrotask(() => this.draw());
@@ -93,7 +149,20 @@ export class TimelineCanvasComponent implements AfterViewInit {
 
   ngAfterViewInit(): void {
     this.isViewReady = true;
+    this.bindCanvasEvents();
     this.draw();
+  }
+
+  private bindCanvasEvents(): void {
+    const canvas = this.canvasRef?.nativeElement;
+
+    if (!canvas) {
+      return;
+    }
+
+    canvas.addEventListener('mousemove', (event) => this.handlePointerMove(event));
+    canvas.addEventListener('mouseleave', () => this.hoverTimestampChange.emit(null));
+    canvas.addEventListener('click', (event) => this.handleCanvasClick(event));
   }
 
   private draw(): void {
@@ -166,6 +235,18 @@ export class TimelineCanvasComponent implements AfterViewInit {
       context.fill();
     }
 
+    const hoveredTimestamp = this.hoveredTimestamp();
+
+    if (hoveredTimestamp) {
+      const x = laneX + ((hoveredTimestamp - loadedWindow.requestStartMs) / totalRange) * laneWidth;
+      context.strokeStyle = 'rgba(25, 79, 106, 0.45)';
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(x, 20);
+      context.lineTo(x, 146);
+      context.stroke();
+    }
+
     context.fillStyle = '#17313b';
     context.font = '12px Space Grotesk, Segoe UI, sans-serif';
     context.fillText('00:00', laneX, 28);
@@ -183,5 +264,83 @@ export class TimelineCanvasComponent implements AfterViewInit {
     context.fillText('Timeline visualization will appear when metadata is loaded.', 16, height / 2);
     context.strokeStyle = 'rgba(23, 49, 59, 0.12)';
     context.strokeRect(12, 32, width - 24, 100);
+  }
+
+  private handlePointerMove(event: MouseEvent): void {
+    const timestampMs = this.resolveTimestamp(event.offsetX);
+    this.hoverTimestampChange.emit(timestampMs);
+  }
+
+  private handleCanvasClick(event: MouseEvent): void {
+    const loadedWindow = this.loadedWindow();
+
+    if (!loadedWindow) {
+      return;
+    }
+
+    const timestampMs = this.resolveTimestamp(event.offsetX);
+    const matchedReviewEvent = this.findNearestReviewEvent(loadedWindow.reviewEvents, timestampMs);
+
+    if (matchedReviewEvent) {
+      this.reviewEventSelect.emit(matchedReviewEvent.id);
+      this.timelineSelect.emit(matchedReviewEvent.startMs);
+      return;
+    }
+
+    this.reviewEventSelect.emit(null);
+    this.timelineSelect.emit(timestampMs);
+  }
+
+  private resolveTimestamp(offsetX: number): number {
+    const loadedWindow = this.loadedWindow();
+
+    if (!loadedWindow) {
+      return 0;
+    }
+
+    const canvas = this.canvasRef?.nativeElement;
+    const width = canvas?.clientWidth || 800;
+    const laneX = 12;
+    const laneWidth = width - 24;
+    const clampedX = Math.min(Math.max(offsetX, laneX), laneX + laneWidth);
+    const ratio = (clampedX - laneX) / laneWidth;
+
+    return Math.round(
+      loadedWindow.requestStartMs + ratio * (loadedWindow.requestEndMs - loadedWindow.requestStartMs)
+    );
+  }
+
+  private findNearestReviewEvent(
+    reviewEvents: ReviewEvent[],
+    timestampMs: number
+  ): ReviewEvent | null {
+    let bestMatch: ReviewEvent | null = null;
+    let smallestDistance = 90_000;
+
+    for (const reviewEvent of reviewEvents) {
+      const distance = Math.abs(reviewEvent.startMs - timestampMs);
+
+      if (distance < smallestDistance) {
+        smallestDistance = distance;
+        bestMatch = reviewEvent;
+      }
+    }
+
+    return bestMatch;
+  }
+
+  protected tooltipLeft(): number {
+    const loadedWindow = this.loadedWindow();
+    const hoveredTimestamp = this.hoveredTimestamp();
+
+    if (!loadedWindow || hoveredTimestamp === null) {
+      return 50;
+    }
+
+    const ratio =
+      (hoveredTimestamp - loadedWindow.requestStartMs) /
+      Math.max(loadedWindow.requestEndMs - loadedWindow.requestStartMs, 1);
+
+    return Math.min(Math.max(ratio * 100, 12), 88);
   }
 }
