@@ -150,35 +150,6 @@ export class HttpFrigateAdapter implements FrigateAdapter {
       return null;
     }
 
-    if (this.runtimeConfig.deploymentMode === 'proxy') {
-      try {
-        const params = new URLSearchParams({
-          camera: input.cameraId,
-          timestamp: this.toEpochSeconds(input.timestampMs)
-        });
-
-        const response = await this.fetchJson<{
-          url?: string;
-          startMs?: number | string;
-          endMs?: number | string;
-          transport?: PlaybackSource['transport'];
-        }>(this.buildUrl('/api/playback-source', params));
-
-        if (response.url) {
-          return {
-            cameraId: input.cameraId,
-            requestedTimestampMs: input.timestampMs,
-            resolvedUrl: this.resolveMediaUrl(response.url),
-            playableRangeStartMs: this.toEpochMilliseconds(response.startMs) || input.timestampMs,
-            playableRangeEndMs: this.toEpochMilliseconds(response.endMs) || input.timestampMs,
-            transport: response.transport || 'unknown'
-          };
-        }
-      } catch {
-        // Fall back to recording-based resolution below.
-      }
-    }
-
     const startMs = input.timestampMs - 3_600_000;
     const endMs = input.timestampMs + 3_600_000;
     const recordings = await this.getRecordings({
@@ -201,13 +172,17 @@ export class HttpFrigateAdapter implements FrigateAdapter {
         )[0];
 
     if (!nearestSegment || !nearestSegment.mediaPath) {
-      return null;
+      if (!nearestSegment) {
+        return null;
+      }
     }
 
     return {
       cameraId: input.cameraId,
       requestedTimestampMs: input.timestampMs,
-      resolvedUrl: this.resolveMediaUrl(nearestSegment.mediaPath),
+      resolvedUrl: this.buildUrl(
+        `/api/${input.cameraId}/start/${this.toEpochSeconds(nearestSegment.startMs)}/end/${this.toEpochSeconds(nearestSegment.endMs)}/clip.mp4`
+      ),
       playableRangeStartMs: nearestSegment.startMs,
       playableRangeEndMs: nearestSegment.endMs,
       transport: 'mp4'

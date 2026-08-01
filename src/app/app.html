@@ -259,75 +259,11 @@
     </div>
   </section>
 
-  <section class="timeline-visualization" aria-label="Timeline visualization">
-    <div class="workspace-panel">
-      <p class="section-label">Timeline canvas</p>
-      <h2>Recording and review overlay</h2>
-      <app-timeline-canvas
-        [loadedWindow]="timelineStore.timelineState().loadedWindow"
-        [selectedReviewEventId]="reviewStore.reviewState().selectedEventId"
-        [hoveredTimestamp]="timelineStore.timelineState().hoveredTimestampMs"
-        [previewStatus]="timelineStore.timelineState().previewStatus"
-        [previewFrame]="timelineStore.timelineState().previewFrame"
-        (hoverTimestampChange)="handleTimelineHover($event)"
-        (scrubTimestampChange)="handleTimelineScrub($event)"
-        (timelineSelect)="handleTimelineSelect($event)"
-        (reviewEventSelect)="handleTimelineReviewEventSelect($event)"
-      />
-    </div>
-  </section>
-
-  <section class="timeline-visualization" aria-label="Playback panel">
+  <section class="timeline-visualization" aria-label="Timeline and playback view">
     <div class="workspace-panel playback-panel">
-      <p class="section-label">Playback resolution</p>
-      <h2>Selected playback target</h2>
-
-      @if (playbackStore.playbackState().targetTimestampMs; as targetTimestampMs) {
-        <dl>
-          <div>
-            <dt>Target timestamp</dt>
-            <dd>{{ targetTimestampMs }}</dd>
-          </div>
-          <div>
-            <dt>Status</dt>
-            <dd>{{ playbackStore.playbackState().playerStatus }}</dd>
-          </div>
-          @if (playbackStore.playbackState().resolvedSource; as resolvedSource) {
-            <div class="video-shell">
-              <video
-                class="playback-video"
-                controls
-                preload="metadata"
-                [src]="resolvedSource.resolvedUrl"
-                (loadstart)="handleVideoLoadStart()"
-                (canplay)="handleVideoCanPlay()"
-                (play)="handleVideoPlay()"
-                (pause)="handleVideoPause()"
-              ></video>
-            </div>
-            <div>
-              <dt>Transport</dt>
-              <dd>{{ resolvedSource.transport }}</dd>
-            </div>
-            <div>
-              <dt>Playable range</dt>
-              <dd>
-                {{ resolvedSource.playableRangeStartMs }} to {{ resolvedSource.playableRangeEndMs }}
-              </dd>
-            </div>
-            <div>
-              <dt>Resolved URL</dt>
-              <dd class="breakable">{{ resolvedSource.resolvedUrl }}</dd>
-            </div>
-          }
-        </dl>
-
-        @if (playbackStore.playbackState().error; as error) {
-          <p class="workspace-message error playback-error">{{ error.message }}</p>
-        }
-      } @else {
-        <p class="workspace-message">Click the timeline to resolve playback for a timestamp.</p>
-      }
+      <p class="section-label">Timeline view</p>
+      <h2>Nest-inspired mobile timeline</h2>
+      <app-timeline-view></app-timeline-view>
     </div>
   </section>
 
