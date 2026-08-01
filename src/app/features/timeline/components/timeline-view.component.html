@@ -1,0 +1,78 @@
+<section class="timeline-view" aria-label="Timeline view">
+  <header class="timeline-view-header">
+    @if (showLivePill()) {
+      <div class="badge badge-live">Live</div>
+    }
+    <p class="camera-name">{{ selectedCamera()?.name || 'Camera feed' }}</p>
+  </header>
+
+  <article class="content-stage" aria-label="Camera content">
+    @if (mode() === 'preview' || !hasVideoSource()) {
+      @if (previewFrame(); as frame) {
+        <img
+          class="preview-image"
+          [src]="frame.imageUrl"
+          [alt]="'Preview at ' + selectedTimestampSubtitle()"
+        />
+      } @else {
+        <div class="preview-placeholder">Preparing preview...</div>
+      }
+    }
+
+    @if (mode() === 'video' && playbackState().resolvedSource; as source) {
+      <video
+        class="playback-video"
+        controls
+        autoplay
+        muted
+        playsinline
+        preload="metadata"
+        [src]="source.resolvedUrl"
+        [attr.aria-label]="'Playback at ' + selectedTimestampSubtitle()"
+        (loadstart)="handleVideoLoadStart()"
+        (canplay)="handleVideoCanPlay()"
+        (play)="handleVideoPlay()"
+        (pause)="handleVideoPause()"
+        (error)="handleVideoError()"
+      ></video>
+    }
+
+    <div class="content-overlay">
+      <p class="timestamp-pill">{{ selectedTimestampLabel() }}</p>
+      @if (isSeeking()) {
+        <p class="mode-pill">Seeking preview</p>
+      } @else if (mode() === 'video') {
+        <p class="mode-pill">Playing</p>
+      }
+    </div>
+  </article>
+
+  <section class="timeline-stage" aria-label="History timeline">
+    <div class="timeline-center-indicator" aria-hidden="true"></div>
+    <div class="timeline-center-label" aria-live="polite">{{ selectedTimestampSubtitle() }}</div>
+
+    <div
+      #timelineScroller
+      class="timeline-scroller"
+      role="slider"
+      tabindex="0"
+      [attr.aria-valuenow]="selectedTimestampMs() || 0"
+      [attr.aria-valuetext]="selectedTimestampSubtitle()"
+      [attr.aria-valuemin]="loadedWindow()?.requestStartMs || 0"
+      [attr.aria-valuemax]="loadedWindow()?.requestEndMs || 0"
+      (scroll)="handleTimelineScroll($event)"
+      (pointerdown)="handleTimelinePointerDown()"
+      (pointerup)="handleTimelinePointerUp()"
+      (pointercancel)="handleTimelinePointerUp()"
+    >
+      <div class="timeline-track">
+        @for (mark of timelineMarks(); track mark.timestampMs) {
+          <div class="timeline-mark">
+            <span class="timeline-mark-time">{{ mark.label }}</span>
+            <span class="timeline-mark-rule"></span>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+</section>

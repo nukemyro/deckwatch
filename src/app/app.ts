@@ -6,12 +6,12 @@ import { RUNTIME_CONFIG } from './core/config/runtime-config.token';
 import { CameraWorkspaceStore } from './features/camera-workspace/state/camera-workspace.store';
 import { PlaybackStore } from './features/playback/state/playback.store';
 import { ReviewStore } from './features/review-overlay/state/review.store';
-import { TimelineCanvasComponent } from './features/timeline/components/timeline-canvas.component';
+import { TimelineViewComponent } from './features/timeline/components/timeline-view.component';
 import { TimelineStore } from './features/timeline/state/timeline.store';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, TimelineCanvasComponent, KeyValuePipe],
+  imports: [RouterOutlet, TimelineViewComponent, KeyValuePipe],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

@@ -1,0 +1,38 @@
+<div class="timeline-frame">
+  <canvas
+    #canvas
+    class="timeline-canvas"
+    tabindex="0"
+    aria-label="Timeline visualization"
+  ></canvas>
+  @if (hoveredTimestamp() !== null) {
+    <div class="timeline-tooltip" [style.left.%]="tooltipLeft()">
+      @if (displayedPreviewUrl(); as imageUrl) {
+        <img
+          [src]="imageUrl"
+          alt="Preview frame"
+          [class.timeline-tooltip-image-loading]="isPreviewLoading()"
+        />
+        @if (isPreviewLoading()) {
+          <div class="timeline-tooltip-overlay timeline-tooltip-loading" aria-label="Loading preview frame">
+            <span class="timeline-spinner"></span>
+            <span class="timeline-loading-label">Loading...</span>
+          </div>
+        }
+      } @else if (isPreviewLoading()) {
+        <div class="timeline-tooltip-placeholder timeline-tooltip-loading" aria-label="Loading preview frame">
+          <span class="timeline-spinner"></span>
+          <span class="timeline-loading-label">Loading...</span>
+        </div>
+      } @else {
+        <div class="timeline-tooltip-placeholder">Preview unavailable</div>
+      }
+      <p>{{ formatTooltipTimestamp(hoveredTimestamp()) }}</p>
+    </div>
+  }
+  <div class="timeline-legend">
+    <span><i class="segment"></i> Recording segment</span>
+    <span><i class="gap"></i> Gap</span>
+    <span><i class="event"></i> Review event</span>
+  </div>
+</div>
