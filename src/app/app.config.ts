@@ -10,7 +10,7 @@ import { routes } from './app.routes';
 import { RuntimeConfigStore } from './core/config/runtime-config.store';
 import { RUNTIME_CONFIG } from './core/config/runtime-config.token';
 import { FRIGATE_ADAPTER } from './data-access/frigate/adapter/frigate-adapter.token';
-import { NullFrigateAdapter } from './data-access/frigate/adapter/null-frigate-adapter.service';
+import { HttpFrigateAdapter } from './data-access/frigate/adapter/http-frigate-adapter.service';
 
 function initializeRuntimeConfig(runtimeConfigStore: RuntimeConfigStore) {
   return () => runtimeConfigStore.load();
@@ -34,7 +34,7 @@ export const appConfig: ApplicationConfig = {
     },
     {
       provide: FRIGATE_ADAPTER,
-      useClass: NullFrigateAdapter
+      useClass: HttpFrigateAdapter
     }
   ]
 };

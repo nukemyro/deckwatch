@@ -52,5 +52,119 @@
     </div>
   </section>
 
+  <section class="workspace" aria-label="Camera workspace">
+    <div class="workspace-panel">
+      <p class="section-label">Camera workspace</p>
+      <h2>Available cameras</h2>
+
+      @if (cameraWorkspaceStore.isLoading()) {
+        <p class="workspace-message">Loading camera catalog...</p>
+      } @else if (cameraWorkspaceStore.error(); as error) {
+        <p class="workspace-message error">{{ error.message }}</p>
+      } @else if (cameraWorkspaceStore.cameras().length === 0) {
+        <p class="workspace-message">No cameras available yet. Configure Frigate and runtime-config.json.</p>
+      } @else {
+        <div class="camera-list">
+          @for (camera of cameraWorkspaceStore.cameras(); track camera.id) {
+            <button
+              type="button"
+              class="camera-chip"
+              [class.selected]="cameraWorkspaceStore.selectedCamera()?.id === camera.id"
+              (click)="selectCamera(camera.id)"
+            >
+              <span>{{ camera.name }}</span>
+              <small>{{ camera.id }}</small>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="workspace-panel detail-panel">
+      <p class="section-label">Current selection</p>
+      @if (cameraWorkspaceStore.selectedCamera(); as selectedCamera) {
+        <h2>{{ selectedCamera.name }}</h2>
+        <dl>
+          <div>
+            <dt>Camera ID</dt>
+            <dd>{{ selectedCamera.id }}</dd>
+          </div>
+          <div>
+            <dt>Recordings</dt>
+            <dd>{{ selectedCamera.hasRecordings ? 'Available' : 'Unavailable' }}</dd>
+          </div>
+          <div>
+            <dt>Review events</dt>
+            <dd>{{ selectedCamera.hasReviewEvents ? 'Available' : 'Unavailable' }}</dd>
+          </div>
+        </dl>
+      } @else {
+        <h2>No active camera</h2>
+        <p class="workspace-message">A default selection will appear once camera metadata is available.</p>
+      }
+    </div>
+  </section>
+
+  <section class="workspace timeline-preview" aria-label="Timeline metadata preview">
+    <div class="workspace-panel">
+      <p class="section-label">Timeline metadata</p>
+      <h2>Recording window</h2>
+
+      @if (timelineStore.timelineState().windowStatus === 'loading') {
+        <p class="workspace-message">Loading recording segments for the selected day...</p>
+      } @else if (timelineStore.timelineState().error; as error) {
+        <p class="workspace-message error">{{ error.message }}</p>
+      } @else if (timelineStore.timelineState().loadedWindow; as loadedWindow) {
+        <dl>
+          <div>
+            <dt>Window start</dt>
+            <dd>{{ loadedWindow.requestStartMs }}</dd>
+          </div>
+          <div>
+            <dt>Window end</dt>
+            <dd>{{ loadedWindow.requestEndMs }}</dd>
+          </div>
+          <div>
+            <dt>Segments loaded</dt>
+            <dd>{{ loadedWindow.segments.length }}</dd>
+          </div>
+          <div>
+            <dt>Review events loaded</dt>
+            <dd>{{ loadedWindow.reviewEvents.length }}</dd>
+          </div>
+        </dl>
+      } @else {
+        <p class="workspace-message">Select a camera to load recording metadata.</p>
+      }
+    </div>
+
+    <div class="workspace-panel detail-panel">
+      <p class="section-label">Review overlay</p>
+      <h2>Loaded review events</h2>
+
+      @if (reviewStore.reviewState().status === 'loading') {
+        <p class="workspace-message">Loading review markers for the active window...</p>
+      } @else if (reviewStore.reviewState().error; as error) {
+        <p class="workspace-message error">{{ error.message }}</p>
+      } @else if (reviewStore.reviewState().events.length === 0) {
+        <p class="workspace-message">No review events are available for the active day window.</p>
+      } @else {
+        <div class="review-list">
+          @for (event of reviewStore.reviewState().events.slice(0, 6); track event.id) {
+            <button
+              type="button"
+              class="review-item"
+              [class.selected]="reviewStore.reviewState().selectedEventId === event.id"
+              (click)="selectReviewEvent(event.id)"
+            >
+              <span>{{ event.type }}</span>
+              <small>{{ event.label || 'unlabeled event' }}</small>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
   <router-outlet />
 </main>

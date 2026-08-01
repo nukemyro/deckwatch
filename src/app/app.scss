@@ -15,7 +15,8 @@
 
 .hero,
 .status-grid,
-.roadmap {
+.roadmap,
+.workspace {
 	width: min(1100px, 100%);
 	margin: 0 auto;
 }
@@ -97,8 +98,130 @@ h1 {
 	gap: 1rem;
 }
 
+.workspace {
+	display: grid;
+	grid-template-columns: 1.4fr 1fr;
+	gap: 1rem;
+	margin-top: 2.5rem;
+}
+
 .roadmap > div {
 	padding: 1.25rem;
+}
+
+.workspace-panel {
+	padding: 1.25rem;
+	border: 1px solid rgba(23, 49, 59, 0.12);
+	border-radius: 1.25rem;
+	background: rgba(255, 255, 255, 0.72);
+	backdrop-filter: blur(10px);
+	box-shadow: 0 18px 50px rgba(51, 72, 78, 0.08);
+}
+
+.workspace-panel h2 {
+	margin: 0 0 1rem;
+	font-size: 1.35rem;
+}
+
+.workspace-message {
+	margin: 0;
+	line-height: 1.6;
+	color: rgba(23, 49, 59, 0.78);
+}
+
+.workspace-message.error {
+	color: #9d3d2c;
+}
+
+.camera-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.camera-chip {
+	min-width: 10rem;
+	padding: 0.9rem 1rem;
+	border: 1px solid rgba(23, 49, 59, 0.12);
+	border-radius: 1rem;
+	background: #fff8f1;
+	color: #17313b;
+	text-align: left;
+	cursor: pointer;
+}
+
+.camera-chip span,
+.camera-chip small {
+	display: block;
+}
+
+.camera-chip span {
+	font-weight: 700;
+}
+
+.camera-chip small {
+	margin-top: 0.25rem;
+	color: rgba(23, 49, 59, 0.64);
+}
+
+.camera-chip.selected {
+	border-color: rgba(132, 87, 49, 0.42);
+	background: linear-gradient(180deg, #fff3df, #f3ece1);
+}
+
+.review-list {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.review-item {
+	padding: 0.85rem 1rem;
+	border: 1px solid rgba(23, 49, 59, 0.12);
+	border-radius: 1rem;
+	background: #f7fbfc;
+	text-align: left;
+	cursor: pointer;
+}
+
+.review-item span,
+.review-item small {
+	display: block;
+}
+
+.review-item span {
+	font-weight: 700;
+	text-transform: capitalize;
+}
+
+.review-item small {
+	margin-top: 0.25rem;
+	color: rgba(23, 49, 59, 0.64);
+}
+
+.review-item.selected {
+	border-color: rgba(73, 123, 145, 0.42);
+	background: linear-gradient(180deg, #edf6fa, #f8fbfc);
+}
+
+.detail-panel dl {
+	margin: 0;
+}
+
+.detail-panel div + div {
+	margin-top: 0.8rem;
+}
+
+.detail-panel dt {
+	font-size: 0.82rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #876447;
+}
+
+.detail-panel dd {
+	margin: 0.25rem 0 0;
+	color: rgba(23, 49, 59, 0.82);
 }
 
 .roadmap ul {
@@ -117,7 +240,8 @@ code {
 
 @media (max-width: 820px) {
 	.status-grid,
-	.roadmap {
+	.roadmap,
+	.workspace {
 		grid-template-columns: 1fr;
 	}
 

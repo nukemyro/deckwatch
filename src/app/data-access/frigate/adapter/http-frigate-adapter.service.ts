@@ -1,0 +1,230 @@
+import { Injectable, inject } from '@angular/core';
+
+import { RUNTIME_CONFIG } from '../../../core/config/runtime-config.token';
+import type {
+  CameraSummary,
+  FrigateAdapter,
+  GetPreviewFrameInput,
+  GetRecordingsInput,
+  GetReviewEventsInput,
+  PlaybackSource,
+  PreviewFrame,
+  RecordingSegment,
+  ResolvePlaybackSourceInput,
+  ReviewEvent
+} from './frigate-adapter';
+
+type FrigateCameraDto = {
+  name?: string;
+  enabled?: boolean;
+  record?: { enabled?: boolean };
+  detect?: { enabled?: boolean };
+  review?: { alerts?: { enabled?: boolean }; detections?: { enabled?: boolean } };
+  ui?: { order?: number };
+};
+
+type FrigateRecordingDto = {
+  camera?: string;
+  start_time?: number | string;
+  end_time?: number | string;
+  duration?: number;
+  path?: string;
+};
+
+type FrigateReviewEventDto = {
+  id?: string | number;
+  camera?: string;
+  start_time?: number | string;
+  end_time?: number | string;
+  severity?: string;
+  label?: string;
+  data?: { objects?: string[]; sub_label?: string };
+};
+
+@Injectable()
+export class HttpFrigateAdapter implements FrigateAdapter {
+  private readonly runtimeConfig = inject(RUNTIME_CONFIG);
+
+  async getCameras(): Promise<CameraSummary[]> {
+    if (!this.baseUrl) {
+      return [];
+    }
+
+    const response = await this.fetchJson<Record<string, FrigateCameraDto> | CameraSummary[]>(
+      this.buildUrl(this.resolvePath('cameras'))
+    );
+
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    return Object.entries(response)
+      .map(([cameraId, camera]) => this.mapCamera(cameraId, camera))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  async getRecordings(input: GetRecordingsInput): Promise<RecordingSegment[]> {
+    if (!this.baseUrl) {
+      return [];
+    }
+
+    const params = new URLSearchParams({
+      camera: input.cameraId,
+      start: this.toEpochSeconds(input.startMs),
+      end: this.toEpochSeconds(input.endMs)
+    });
+
+    const response = await this.fetchJson<FrigateRecordingDto[]>(
+      this.buildUrl(this.resolvePath('recordings'), params)
+    );
+
+    return response.map((recording) => this.mapRecording(input.cameraId, recording));
+  }
+
+  async getReviewEvents(input: GetReviewEventsInput): Promise<ReviewEvent[]> {
+    if (!this.baseUrl) {
+      return [];
+    }
+
+    const params = new URLSearchParams({
+      camera: input.cameraId,
+      start: this.toEpochSeconds(input.startMs),
+      end: this.toEpochSeconds(input.endMs)
+    });
+
+    if (input.types?.length) {
+      params.set('types', input.types.join(','));
+    }
+
+    if (input.labels?.length) {
+      params.set('labels', input.labels.join(','));
+    }
+
+    const response = await this.fetchJson<FrigateReviewEventDto[]>(
+      this.buildUrl(this.resolvePath('review-events'), params)
+    );
+
+    return response.map((reviewEvent) => this.mapReviewEvent(input.cameraId, reviewEvent));
+  }
+
+  async getPreviewFrame(_input: GetPreviewFrameInput): Promise<PreviewFrame | null> {
+    return null;
+  }
+
+  async resolvePlaybackSource(
+    _input: ResolvePlaybackSourceInput
+  ): Promise<PlaybackSource | null> {
+    return null;
+  }
+
+  private async fetchJson<T>(url: string): Promise<T> {
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Frigate request failed with status ${response.status}.`);
+    }
+
+    return (await response.json()) as T;
+  }
+
+  private resolvePath(resource: 'cameras' | 'recordings' | 'review-events'): string {
+    if (this.runtimeConfig.deploymentMode === 'proxy') {
+      if (resource === 'cameras') {
+        return '/api/cameras';
+      }
+
+      if (resource === 'recordings') {
+        return '/api/recordings';
+      }
+
+      return '/api/review-events';
+    }
+
+    if (resource === 'cameras') {
+      return '/api/config';
+    }
+
+    if (resource === 'recordings') {
+      return '/api/recordings';
+    }
+
+    return '/api/review';
+  }
+
+  private buildUrl(path: string, params?: URLSearchParams): string {
+    const url = `${this.baseUrl}${path}`;
+    return params ? `${url}?${params.toString()}` : url;
+  }
+
+  private mapCamera(cameraId: string, camera: FrigateCameraDto): CameraSummary {
+    return {
+      id: cameraId,
+      name: camera.name || cameraId,
+      enabled: camera.enabled !== false,
+      hasRecordings: camera.record?.enabled !== false,
+      hasReviewEvents:
+        camera.review?.alerts?.enabled !== false || camera.review?.detections?.enabled !== false
+    };
+  }
+
+  private mapRecording(cameraId: string, recording: FrigateRecordingDto): RecordingSegment {
+    const startMs = this.toEpochMilliseconds(recording.start_time);
+    const endMs = this.toEpochMilliseconds(recording.end_time);
+    const durationMs = recording.duration ? recording.duration * 1000 : Math.max(endMs - startMs, 0);
+
+    return {
+      cameraId: recording.camera || cameraId,
+      startMs,
+      endMs,
+      durationMs,
+      mediaPath: recording.path || '',
+      sourceKind: 'recording'
+    };
+  }
+
+  private mapReviewEvent(cameraId: string, reviewEvent: FrigateReviewEventDto): ReviewEvent {
+    const startMs = this.toEpochMilliseconds(reviewEvent.start_time);
+    const endMs = reviewEvent.end_time ? this.toEpochMilliseconds(reviewEvent.end_time) : startMs;
+
+    return {
+      id: String(reviewEvent.id || `${cameraId}-${startMs}`),
+      cameraId: reviewEvent.camera || cameraId,
+      startMs,
+      endMs,
+      type: reviewEvent.data?.objects?.[0] || reviewEvent.label || 'review',
+      severity: reviewEvent.severity,
+      label: reviewEvent.data?.sub_label || reviewEvent.label
+    };
+  }
+
+  private toEpochMilliseconds(value: number | string | undefined): number {
+    if (typeof value === 'number') {
+      return value > 10_000_000_000 ? value : value * 1000;
+    }
+
+    if (typeof value === 'string' && value.length > 0) {
+      const numericValue = Number(value);
+
+      if (!Number.isNaN(numericValue)) {
+        return numericValue > 10_000_000_000 ? numericValue : numericValue * 1000;
+      }
+
+      return Date.parse(value);
+    }
+
+    return 0;
+  }
+
+  private toEpochSeconds(value: number): string {
+    return String(Math.floor(value / 1000));
+  }
+
+  private get baseUrl(): string {
+    const rawBaseUrl = this.runtimeConfig.proxyBaseUrl || this.runtimeConfig.frigateBaseUrl;
+    return rawBaseUrl.replace(/\/$/, '');
+  }
+}
