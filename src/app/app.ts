@@ -16,7 +16,7 @@ import { TimelineStore } from './features/timeline/state/timeline.store';
   styleUrl: './app.scss'
 })
 export class App {
-  protected readonly title = signal('Camera Scroll');
+  protected readonly title = signal('DeckWatch');
   protected readonly runtimeConfig = inject(RUNTIME_CONFIG);
   protected readonly cameraWorkspaceStore = inject(CameraWorkspaceStore);
   protected readonly playbackStore = inject(PlaybackStore);

@@ -1,4 +1,4 @@
-# CameraScroll
+# DeckWatch
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.7.
 
@@ -28,9 +28,9 @@ ng generate --help
 
 ## Building
 
-# Camera Scroll
+# DeckWatch
 
-Camera Scroll is an Angular frontend for historical video exploration on top of Frigate. The current repository contains architecture and implementation planning documents plus an initial Angular scaffold aligned to that plan.
+DeckWatch is an Angular frontend for historical video exploration on top of Frigate. The current repository contains architecture and implementation planning documents plus an initial Angular scaffold aligned to that plan.
 
 ## Repository structure
 
