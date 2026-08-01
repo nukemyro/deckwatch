@@ -1,7 +1,8 @@
 {
-  "frigateBaseUrl": "",
-  "deploymentMode": "direct",
-  "authMode": "none",
+  "frigateBaseUrl": "https://YOUR_FRIGATE_HOST:8971",
+  "proxyBaseUrl": "",
+  "deploymentMode": "proxy",
+  "authMode": "cookie",
   "previewFramesEnabled": true,
   "reviewOverlayEnabled": true,
   "requestTimeoutMs": 15000

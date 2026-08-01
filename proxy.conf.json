@@ -1,0 +1,51 @@
+{
+  "/api": {
+    "target": "https://YOUR_FRIGATE_HOST:8971",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info",
+    "cookieDomainRewrite": "localhost"
+  },
+  "/auth": {
+    "target": "https://YOUR_FRIGATE_HOST:8971",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info",
+    "cookieDomainRewrite": "localhost"
+  },
+  "/login": {
+    "target": "https://YOUR_FRIGATE_HOST:8971",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info",
+    "cookieDomainRewrite": "localhost"
+  },
+  "/logout": {
+    "target": "https://YOUR_FRIGATE_HOST:8971",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info",
+    "cookieDomainRewrite": "localhost"
+  },
+  "/profile": {
+    "target": "https://YOUR_FRIGATE_HOST:8971",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info",
+    "cookieDomainRewrite": "localhost"
+  },
+  "/vod": {
+    "target": "https://YOUR_FRIGATE_HOST:8971",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info",
+    "cookieDomainRewrite": "localhost"
+  },
+  "/media": {
+    "target": "https://YOUR_FRIGATE_HOST:8971",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info",
+    "cookieDomainRewrite": "localhost"
+  }
+}

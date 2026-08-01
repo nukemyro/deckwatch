@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { FRIGATE_ADAPTER } from '../../../data-access/frigate/adapter/frigate-adapter.token';
 import type {
@@ -44,10 +44,15 @@ export class TimelineStore {
   private readonly frigateAdapter = inject(FRIGATE_ADAPTER);
   private readonly cameraWorkspaceStore = inject(CameraWorkspaceStore);
   private readonly reviewStore = inject(ReviewStore);
+  private readonly previewDebounceMs = 150;
 
   private readonly state = signal<TimelineState>(initialTimelineState);
   private lastRequestKey: string | null = null;
   private lastPreviewKey: string | null = null;
+  private previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly pendingPreviewTimestamp = computed(
+    () => this.state().pendingPreviewTimestampMs
+  );
 
   readonly timelineState = this.state.asReadonly();
 
@@ -79,9 +84,11 @@ export class TimelineStore {
 
     effect(() => {
       const workspace = this.cameraWorkspaceStore.cameraWorkspace();
-      const pendingPreviewTimestampMs = this.state().pendingPreviewTimestampMs;
+      const pendingPreviewTimestampMs = this.pendingPreviewTimestamp();
 
       if (!workspace.selectedCameraId || !pendingPreviewTimestampMs) {
+        this.clearPreviewDebounceTimer();
+        this.lastPreviewKey = null;
         this.state.update((state) => ({
           ...state,
           previewStatus: 'idle',
@@ -96,8 +103,7 @@ export class TimelineStore {
         return;
       }
 
-      this.lastPreviewKey = previewKey;
-      void this.loadPreviewFrame(workspace.selectedCameraId, pendingPreviewTimestampMs);
+      this.schedulePreviewLoad(workspace.selectedCameraId, pendingPreviewTimestampMs, previewKey);
     });
   }
 
@@ -147,10 +153,23 @@ export class TimelineStore {
   }
 
   setHoveredTimestamp(timestampMs: number | null): void {
+    const loadedWindow = this.state().loadedWindow;
+    const previewTimestampMs =
+      timestampMs !== null && loadedWindow && this.hasRecordingAtTimestamp(loadedWindow.segments, timestampMs)
+        ? timestampMs
+        : null;
+
     this.state.update((state) => ({
       ...state,
       hoveredTimestampMs: timestampMs,
-      pendingPreviewTimestampMs: timestampMs
+      pendingPreviewTimestampMs: previewTimestampMs,
+      previewFrame: previewTimestampMs === null ? null : state.previewFrame,
+      previewStatus:
+        previewTimestampMs === null
+          ? 'idle'
+          : previewTimestampMs === state.pendingPreviewTimestampMs
+            ? state.previewStatus
+            : 'loading'
     }));
   }
 
@@ -186,6 +205,22 @@ export class TimelineStore {
         previewStatus: 'error',
         previewFrame: null
       }));
+    }
+  }
+
+  private schedulePreviewLoad(cameraId: string, timestampMs: number, previewKey: string): void {
+    this.clearPreviewDebounceTimer();
+    this.previewDebounceTimer = setTimeout(() => {
+      this.previewDebounceTimer = null;
+      this.lastPreviewKey = previewKey;
+      void this.loadPreviewFrame(cameraId, timestampMs);
+    }, this.previewDebounceMs);
+  }
+
+  private clearPreviewDebounceTimer(): void {
+    if (this.previewDebounceTimer !== null) {
+      clearTimeout(this.previewDebounceTimer);
+      this.previewDebounceTimer = null;
     }
   }
 
@@ -238,6 +273,12 @@ export class TimelineStore {
     }
 
     return gaps;
+  }
+
+  private hasRecordingAtTimestamp(segments: RecordingSegment[], timestampMs: number): boolean {
+    return segments.some(
+      (segment) => segment.startMs <= timestampMs && segment.endMs >= timestampMs
+    );
   }
 
   private countReviewEvents(reviewEvents: ReviewEvent[]): Record<string, number> {
