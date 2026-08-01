@@ -1,0 +1,8 @@
+{
+  "frigateBaseUrl": "",
+  "deploymentMode": "direct",
+  "authMode": "none",
+  "previewFramesEnabled": true,
+  "reviewOverlayEnabled": true,
+  "requestTimeoutMs": 15000
+}

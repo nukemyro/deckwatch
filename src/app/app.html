@@ -23,6 +23,12 @@
       <h2>Next build slice</h2>
       <p>Camera workspace, timeline projection, and playback source resolution.</p>
     </article>
+
+    <article class="status-card accent-card">
+      <h2>Runtime mode</h2>
+      <p>{{ runtimeConfig.deploymentMode }} via {{ runtimeConfig.authMode }} auth</p>
+      <p class="meta">Base URL: {{ runtimeConfig.frigateBaseUrl || 'not configured yet' }}</p>
+    </article>
   </section>
 
   <section class="roadmap">
@@ -41,6 +47,7 @@
         <li>Architecture plan in docs/01-architectural.md</li>
         <li>Implementation spec in docs/02-implementation-spec.md</li>
         <li>Endpoint mapping and delivery backlog in docs/03 and docs/04</li>
+        <li>Runtime config served from public/runtime-config.json</li>
       </ul>
     </div>
   </section>

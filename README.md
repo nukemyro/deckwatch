@@ -60,11 +60,25 @@ Run unit tests:
 npm test
 ```
 
+## Runtime configuration
+
+Runtime configuration is served from `public/runtime-config.json` and loaded before Angular bootstraps. This keeps Frigate base URLs and deployment-mode switches out of the compiled application bundle.
+
+Current runtime config fields:
+
+- `frigateBaseUrl`
+- `proxyBaseUrl`
+- `deploymentMode`
+- `authMode`
+- `previewFramesEnabled`
+- `reviewOverlayEnabled`
+- `requestTimeoutMs`
+
 ## Current implementation state
 
 The app is scaffolded with standalone Angular APIs and prepared for the first vertical slice:
 
-- runtime configuration bootstrap
+- runtime configuration bootstrap and DI token
 - Frigate adapter boundary
 - camera workspace state
 - timeline rendering and playback integration

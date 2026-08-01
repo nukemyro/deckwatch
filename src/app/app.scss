@@ -51,7 +51,7 @@ h1 {
 
 .status-grid {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 1rem;
 	margin-bottom: 2.5rem;
 }
@@ -79,6 +79,16 @@ h1 {
 	margin: 0;
 	line-height: 1.65;
 	color: rgba(23, 49, 59, 0.78);
+}
+
+.status-card .meta {
+	margin-top: 0.65rem;
+	font-size: 0.92rem;
+	color: rgba(23, 49, 59, 0.62);
+}
+
+.accent-card {
+	background: linear-gradient(180deg, rgba(255, 247, 236, 0.9), rgba(255, 255, 255, 0.7));
 }
 
 .roadmap {
