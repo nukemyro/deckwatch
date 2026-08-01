@@ -181,6 +181,10 @@
             <dt>Hovered timestamp</dt>
             <dd>{{ timelineStore.timelineState().hoveredTimestampMs || 'none' }}</dd>
           </div>
+          <div>
+            <dt>Scrub timestamp</dt>
+            <dd>{{ timelineStore.timelineState().scrubTimestampMs || 'none' }}</dd>
+          </div>
         </dl>
       } @else {
         <p class="workspace-message">Select a camera to load recording metadata.</p>
@@ -230,6 +234,7 @@
         [hoveredTimestamp]="timelineStore.timelineState().hoveredTimestampMs"
         [previewFrame]="timelineStore.timelineState().previewFrame"
         (hoverTimestampChange)="handleTimelineHover($event)"
+        (scrubTimestampChange)="handleTimelineScrub($event)"
         (timelineSelect)="handleTimelineSelect($event)"
         (reviewEventSelect)="handleTimelineReviewEventSelect($event)"
       />

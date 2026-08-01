@@ -57,6 +57,10 @@ export class App {
     this.playbackStore.setTargetTimestamp(timestampMs);
   }
 
+  protected handleTimelineScrub(timestampMs: number | null): void {
+    this.timelineStore.setScrubTimestamp(timestampMs);
+  }
+
   protected handleTimelineReviewEventSelect(eventId: string | null): void {
     this.reviewStore.selectEvent(eventId);
   }

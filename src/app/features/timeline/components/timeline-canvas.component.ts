@@ -138,12 +138,14 @@ export class TimelineCanvasComponent implements AfterViewInit {
   readonly hoveredTimestamp = input<number | null>(null);
   readonly previewFrame = input<PreviewFrame | null>(null);
   readonly hoverTimestampChange = output<number | null>();
+  readonly scrubTimestampChange = output<number | null>();
   readonly timelineSelect = output<number>();
   readonly reviewEventSelect = output<string | null>();
 
   @ViewChild('canvas') private canvasRef?: ElementRef<HTMLCanvasElement>;
 
   private isViewReady = false;
+  private isScrubbing = false;
 
   constructor() {
     effect(() => {
@@ -171,9 +173,11 @@ export class TimelineCanvasComponent implements AfterViewInit {
       return;
     }
 
-    canvas.addEventListener('mousemove', (event) => this.handlePointerMove(event));
-    canvas.addEventListener('mouseleave', () => this.hoverTimestampChange.emit(null));
-    canvas.addEventListener('click', (event) => this.handleCanvasClick(event));
+    canvas.addEventListener('pointerdown', (event) => this.handlePointerDown(event));
+    canvas.addEventListener('pointermove', (event) => this.handlePointerMove(event));
+    canvas.addEventListener('pointerup', (event) => this.handlePointerUp(event));
+    canvas.addEventListener('pointerleave', () => this.handlePointerLeave());
+    canvas.addEventListener('pointercancel', () => this.stopScrubbing());
     canvas.addEventListener('keydown', (event) => this.handleKeyDown(event));
   }
 
@@ -278,12 +282,33 @@ export class TimelineCanvasComponent implements AfterViewInit {
     context.strokeRect(12, 32, width - 24, 100);
   }
 
-  private handlePointerMove(event: MouseEvent): void {
+  private handlePointerDown(event: PointerEvent): void {
+    const canvas = this.canvasRef?.nativeElement;
+
+    if (!canvas) {
+      return;
+    }
+
+    canvas.focus();
+    canvas.setPointerCapture(event.pointerId);
+    this.isScrubbing = true;
+
     const timestampMs = this.resolveTimestamp(event.offsetX);
     this.hoverTimestampChange.emit(timestampMs);
+    this.scrubTimestampChange.emit(timestampMs);
   }
 
-  private handleCanvasClick(event: MouseEvent): void {
+  private handlePointerMove(event: PointerEvent): void {
+    const timestampMs = this.resolveTimestamp(event.offsetX);
+
+    this.hoverTimestampChange.emit(timestampMs);
+
+    if (this.isScrubbing) {
+      this.scrubTimestampChange.emit(timestampMs);
+    }
+  }
+
+  private handlePointerUp(event: PointerEvent): void {
     const loadedWindow = this.loadedWindow();
 
     if (!loadedWindow) {
@@ -291,16 +316,28 @@ export class TimelineCanvasComponent implements AfterViewInit {
     }
 
     const timestampMs = this.resolveTimestamp(event.offsetX);
+    this.hoverTimestampChange.emit(timestampMs);
+    this.scrubTimestampChange.emit(timestampMs);
     const matchedReviewEvent = this.findNearestReviewEvent(loadedWindow.reviewEvents, timestampMs);
 
     if (matchedReviewEvent) {
       this.reviewEventSelect.emit(matchedReviewEvent.id);
       this.timelineSelect.emit(matchedReviewEvent.startMs);
+      this.stopScrubbing(event.pointerId);
       return;
     }
 
     this.reviewEventSelect.emit(null);
     this.timelineSelect.emit(timestampMs);
+    this.stopScrubbing(event.pointerId);
+  }
+
+  private handlePointerLeave(): void {
+    if (this.isScrubbing) {
+      return;
+    }
+
+    this.hoverTimestampChange.emit(null);
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -342,8 +379,19 @@ export class TimelineCanvasComponent implements AfterViewInit {
 
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      this.scrubTimestampChange.emit(currentTimestamp);
       this.timelineSelect.emit(currentTimestamp);
     }
+  }
+
+  private stopScrubbing(pointerId?: number): void {
+    const canvas = this.canvasRef?.nativeElement;
+
+    if (canvas && pointerId !== undefined && canvas.hasPointerCapture(pointerId)) {
+      canvas.releasePointerCapture(pointerId);
+    }
+
+    this.isScrubbing = false;
   }
 
   private resolveTimestamp(offsetX: number): number {
