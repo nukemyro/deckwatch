@@ -26,6 +26,14 @@
 	margin-bottom: 2.5rem;
 }
 
+.deckwatch-logo {
+	display: block;
+	width: clamp(11rem, 28vw, 16rem);
+	height: auto;
+	margin: 0 0 1.1rem;
+  background:transparent;
+}
+
 .eyebrow,
 .section-label {
 	margin: 0 0 0.75rem;
