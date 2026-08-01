@@ -1,7 +1,11 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
 
 import { FRIGATE_ADAPTER } from '../../../data-access/frigate/adapter/frigate-adapter.token';
-import type { TimelineWindow } from '../../../data-access/frigate/adapter/frigate-adapter';
+import type {
+  RecordingSegment,
+  ReviewEvent,
+  TimelineWindow
+} from '../../../data-access/frigate/adapter/frigate-adapter';
 import type { UiError } from '../../../shared/types/ui-error';
 import { CameraWorkspaceStore } from '../../camera-workspace/state/camera-workspace.store';
 import { ReviewStore } from '../../review-overlay/state/review.store';
@@ -15,6 +19,7 @@ export type TimelineState = {
   scrubTimestampMs: number | null;
   pendingPreviewTimestampMs: number | null;
   densityMode: TimelineDensityMode;
+  reviewEventCounts: Record<string, number>;
   error: UiError | null;
 };
 
@@ -25,6 +30,7 @@ export const initialTimelineState: TimelineState = {
   scrubTimestampMs: null,
   pendingPreviewTimestampMs: null,
   densityMode: 'medium',
+  reviewEventCounts: {},
   error: null
 };
 
@@ -86,14 +92,16 @@ export class TimelineStore {
       this.state.update((state) => ({
         ...state,
         windowStatus: 'ready',
+        densityMode: this.deriveDensityMode(segments, reviewEvents),
+        reviewEventCounts: this.countReviewEvents(reviewEvents),
         loadedWindow: {
           requestStartMs: startMs,
           requestEndMs: endMs,
           loadedStartMs: startMs,
           loadedEndMs: endMs,
-          segments,
+          segments: this.normalizeSegments(segments, startMs, endMs),
           reviewEvents,
-          gaps: []
+          gaps: this.calculateGaps(segments, startMs, endMs)
         }
       }));
     } catch {
@@ -107,5 +115,80 @@ export class TimelineStore {
         }
       }));
     }
+  }
+
+  private normalizeSegments(
+    segments: RecordingSegment[],
+    startMs: number,
+    endMs: number
+  ): RecordingSegment[] {
+    return segments
+      .map((segment) => {
+        const normalizedStartMs = Math.max(segment.startMs, startMs);
+        const normalizedEndMs = Math.min(segment.endMs, endMs);
+
+        return {
+          ...segment,
+          startMs: normalizedStartMs,
+          endMs: normalizedEndMs,
+          durationMs: Math.max(normalizedEndMs - normalizedStartMs, 0)
+        };
+      })
+      .filter((segment) => segment.endMs > segment.startMs)
+      .sort((left, right) => left.startMs - right.startMs);
+  }
+
+  private calculateGaps(
+    segments: RecordingSegment[],
+    startMs: number,
+    endMs: number
+  ): Array<{ startMs: number; endMs: number }> {
+    const normalizedSegments = this.normalizeSegments(segments, startMs, endMs);
+    const gaps: Array<{ startMs: number; endMs: number }> = [];
+    let cursor = startMs;
+
+    for (const segment of normalizedSegments) {
+      if (segment.startMs > cursor) {
+        gaps.push({
+          startMs: cursor,
+          endMs: segment.startMs
+        });
+      }
+
+      cursor = Math.max(cursor, segment.endMs);
+    }
+
+    if (cursor < endMs) {
+      gaps.push({
+        startMs: cursor,
+        endMs
+      });
+    }
+
+    return gaps;
+  }
+
+  private countReviewEvents(reviewEvents: ReviewEvent[]): Record<string, number> {
+    return reviewEvents.reduce<Record<string, number>>((counts, reviewEvent) => {
+      counts[reviewEvent.type] = (counts[reviewEvent.type] || 0) + 1;
+      return counts;
+    }, {});
+  }
+
+  private deriveDensityMode(
+    segments: RecordingSegment[],
+    reviewEvents: ReviewEvent[]
+  ): TimelineDensityMode {
+    const score = segments.length + reviewEvents.length;
+
+    if (score > 120) {
+      return 'coarse';
+    }
+
+    if (score > 40) {
+      return 'medium';
+    }
+
+    return 'fine';
   }
 }

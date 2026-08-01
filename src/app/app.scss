@@ -16,7 +16,8 @@
 .hero,
 .status-grid,
 .roadmap,
-.workspace {
+.workspace,
+.timeline-visualization {
 	width: min(1100px, 100%);
 	margin: 0 auto;
 }
@@ -201,6 +202,26 @@ h1 {
 .review-item.selected {
 	border-color: rgba(73, 123, 145, 0.42);
 	background: linear-gradient(180deg, #edf6fa, #f8fbfc);
+}
+
+.event-buckets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	margin-bottom: 0.9rem;
+}
+
+.event-buckets span {
+	padding: 0.35rem 0.7rem;
+	border-radius: 999px;
+	background: rgba(79, 143, 176, 0.12);
+	color: #27566b;
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.timeline-visualization {
+	margin-top: 2.5rem;
 }
 
 .detail-panel dl {

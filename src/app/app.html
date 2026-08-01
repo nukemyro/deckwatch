@@ -132,6 +132,14 @@
             <dt>Review events loaded</dt>
             <dd>{{ loadedWindow.reviewEvents.length }}</dd>
           </div>
+          <div>
+            <dt>Detected gaps</dt>
+            <dd>{{ loadedWindow.gaps.length }}</dd>
+          </div>
+          <div>
+            <dt>Density mode</dt>
+            <dd>{{ timelineStore.timelineState().densityMode }}</dd>
+          </div>
         </dl>
       } @else {
         <p class="workspace-message">Select a camera to load recording metadata.</p>
@@ -149,6 +157,11 @@
       } @else if (reviewStore.reviewState().events.length === 0) {
         <p class="workspace-message">No review events are available for the active day window.</p>
       } @else {
+        <div class="event-buckets">
+          @for (bucket of reviewStore.reviewState().countsByType | keyvalue; track bucket.key) {
+            <span>{{ bucket.key }}: {{ bucket.value }}</span>
+          }
+        </div>
         <div class="review-list">
           @for (event of reviewStore.reviewState().events.slice(0, 6); track event.id) {
             <button
@@ -163,6 +176,17 @@
           }
         </div>
       }
+    </div>
+  </section>
+
+  <section class="timeline-visualization" aria-label="Timeline visualization">
+    <div class="workspace-panel">
+      <p class="section-label">Timeline canvas</p>
+      <h2>Recording and review overlay</h2>
+      <app-timeline-canvas
+        [loadedWindow]="timelineStore.timelineState().loadedWindow"
+        [selectedReviewEventId]="reviewStore.reviewState().selectedEventId"
+      />
     </div>
   </section>
 
