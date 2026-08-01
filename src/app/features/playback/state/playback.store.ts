@@ -56,11 +56,22 @@ export class PlaybackStore {
   }
 
   setTargetTimestamp(timestampMs: number | null): void {
+    if (timestampMs === null) {
+      this.lastRequestKey = null;
+    }
+
     this.state.update((state) => ({
       ...state,
       targetTimestampMs: timestampMs,
       pendingSeekTimestampMs: timestampMs,
       error: null
+    }));
+  }
+
+  setPlayerStatus(playerStatus: PlaybackState['playerStatus']): void {
+    this.state.update((state) => ({
+      ...state,
+      playerStatus
     }));
   }
 

@@ -215,6 +215,18 @@
             <dd>{{ playbackStore.playbackState().playerStatus }}</dd>
           </div>
           @if (playbackStore.playbackState().resolvedSource; as resolvedSource) {
+            <div class="video-shell">
+              <video
+                class="playback-video"
+                controls
+                preload="metadata"
+                [src]="resolvedSource.resolvedUrl"
+                (loadstart)="handleVideoLoadStart()"
+                (canplay)="handleVideoCanPlay()"
+                (play)="handleVideoPlay()"
+                (pause)="handleVideoPause()"
+              ></video>
+            </div>
             <div>
               <dt>Transport</dt>
               <dd>{{ resolvedSource.transport }}</dd>

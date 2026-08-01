@@ -60,4 +60,22 @@ export class App {
   protected handleTimelineReviewEventSelect(eventId: string | null): void {
     this.reviewStore.selectEvent(eventId);
   }
+
+  protected handleVideoLoadStart(): void {
+    this.playbackStore.setPlayerStatus('loading');
+  }
+
+  protected handleVideoCanPlay(): void {
+    this.playbackStore.setPlayerStatus('ready');
+  }
+
+  protected handleVideoPlay(): void {
+    this.playbackStore.setPlayerStatus('playing');
+  }
+
+  protected handleVideoPause(): void {
+    if (this.playbackStore.playbackState().resolvedSource) {
+      this.playbackStore.setPlayerStatus('ready');
+    }
+  }
 }

@@ -15,7 +15,12 @@ import type { PreviewFrame, ReviewEvent, TimelineWindow } from '../../../data-ac
   standalone: true,
   template: `
     <div class="timeline-frame">
-      <canvas #canvas class="timeline-canvas" aria-label="Timeline visualization"></canvas>
+      <canvas
+        #canvas
+        class="timeline-canvas"
+        tabindex="0"
+        aria-label="Timeline visualization"
+      ></canvas>
       @if (hoveredTimestamp() !== null) {
         <div class="timeline-tooltip" [style.left.%]="tooltipLeft()">
           @if (previewFrame()?.imageUrl; as imageUrl) {
@@ -46,6 +51,12 @@ import type { PreviewFrame, ReviewEvent, TimelineWindow } from '../../../data-ac
       display: block;
       width: 100%;
       height: 180px;
+      outline: none;
+    }
+
+    .timeline-canvas:focus-visible {
+      box-shadow: 0 0 0 3px rgba(79, 143, 176, 0.25);
+      border-radius: 0.85rem;
     }
 
     .timeline-tooltip {
@@ -163,6 +174,7 @@ export class TimelineCanvasComponent implements AfterViewInit {
     canvas.addEventListener('mousemove', (event) => this.handlePointerMove(event));
     canvas.addEventListener('mouseleave', () => this.hoverTimestampChange.emit(null));
     canvas.addEventListener('click', (event) => this.handleCanvasClick(event));
+    canvas.addEventListener('keydown', (event) => this.handleKeyDown(event));
   }
 
   private draw(): void {
@@ -291,6 +303,49 @@ export class TimelineCanvasComponent implements AfterViewInit {
     this.timelineSelect.emit(timestampMs);
   }
 
+  private handleKeyDown(event: KeyboardEvent): void {
+    const loadedWindow = this.loadedWindow();
+
+    if (!loadedWindow) {
+      return;
+    }
+
+    const currentTimestamp =
+      this.hoveredTimestamp() ?? this.selectedTimestampFallback(loadedWindow.requestStartMs, loadedWindow.requestEndMs);
+    const shortStepMs = 5 * 60 * 1000;
+    const longStepMs = 30 * 60 * 1000;
+    const deltaMs = event.shiftKey ? longStepMs : shortStepMs;
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      this.hoverTimestampChange.emit(Math.max(loadedWindow.requestStartMs, currentTimestamp - deltaMs));
+      return;
+    }
+
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      this.hoverTimestampChange.emit(Math.min(loadedWindow.requestEndMs, currentTimestamp + deltaMs));
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      this.hoverTimestampChange.emit(loadedWindow.requestStartMs);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      this.hoverTimestampChange.emit(loadedWindow.requestEndMs);
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.timelineSelect.emit(currentTimestamp);
+    }
+  }
+
   private resolveTimestamp(offsetX: number): number {
     const loadedWindow = this.loadedWindow();
 
@@ -342,5 +397,9 @@ export class TimelineCanvasComponent implements AfterViewInit {
       Math.max(loadedWindow.requestEndMs - loadedWindow.requestStartMs, 1);
 
     return Math.min(Math.max(ratio * 100, 12), 88);
+  }
+
+  private selectedTimestampFallback(startMs: number, endMs: number): number {
+    return Math.round(startMs + (endMs - startMs) / 2);
   }
 }

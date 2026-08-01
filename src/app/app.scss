@@ -228,6 +228,21 @@ h1 {
 	margin-top: 1rem;
 }
 
+.video-shell {
+	margin: 0 0 1rem;
+	border: 1px solid rgba(23, 49, 59, 0.12);
+	border-radius: 1rem;
+	overflow: hidden;
+	background: #081116;
+}
+
+.playback-video {
+	display: block;
+	width: 100%;
+	max-height: 28rem;
+	background: #081116;
+}
+
 .breakable {
 	word-break: break-all;
 }
