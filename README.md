@@ -48,6 +48,8 @@ Start the development server:
 npm start
 ```
 
+The development server is configured with `proxy.conf.json` to forward Frigate auth, API, and media requests to `https://frigate.example.local:8971`.
+
 Build the application:
 
 ```bash
@@ -73,6 +75,12 @@ Current runtime config fields:
 - `previewFramesEnabled`
 - `reviewOverlayEnabled`
 - `requestTimeoutMs`
+
+For the current local-network setup:
+
+- `deploymentMode` is `proxy`
+- `authMode` is `cookie`
+- Angular dev-server proxies `/login`, `/auth`, `/api`, and media paths to the Frigate instance
 
 ## Current implementation state
 

@@ -270,6 +270,18 @@ h1 {
 	margin-top: 2.5rem;
 }
 
+.auth-panel {
+	margin-top: 0;
+}
+
+.auth-controls {
+	grid-template-columns: minmax(11rem, 14rem) minmax(11rem, 14rem) 1fr;
+}
+
+.auth-actions {
+	align-items: end;
+}
+
 .playback-panel .playback-error {
 	margin-top: 1rem;
 }

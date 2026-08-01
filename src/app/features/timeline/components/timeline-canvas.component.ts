@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  signal,
   ViewChild,
   effect,
   input,
@@ -9,6 +10,7 @@ import {
 } from '@angular/core';
 
 import type { PreviewFrame, ReviewEvent, TimelineWindow } from '../../../data-access/frigate/adapter/frigate-adapter';
+import type { TimelineState } from '../state/timeline.store';
 
 @Component({
   selector: 'app-timeline-canvas',
@@ -23,12 +25,27 @@ import type { PreviewFrame, ReviewEvent, TimelineWindow } from '../../../data-ac
       ></canvas>
       @if (hoveredTimestamp() !== null) {
         <div class="timeline-tooltip" [style.left.%]="tooltipLeft()">
-          @if (previewFrame()?.imageUrl; as imageUrl) {
-            <img [src]="imageUrl" alt="Preview frame" />
+          @if (displayedPreviewUrl(); as imageUrl) {
+            <img
+              [src]="imageUrl"
+              alt="Preview frame"
+              [class.timeline-tooltip-image-loading]="isPreviewLoading()"
+            />
+            @if (isPreviewLoading()) {
+              <div class="timeline-tooltip-overlay timeline-tooltip-loading" aria-label="Loading preview frame">
+                <span class="timeline-spinner"></span>
+                <span class="timeline-loading-label">Loading...</span>
+              </div>
+            }
+          } @else if (isPreviewLoading()) {
+            <div class="timeline-tooltip-placeholder timeline-tooltip-loading" aria-label="Loading preview frame">
+              <span class="timeline-spinner"></span>
+              <span class="timeline-loading-label">Loading...</span>
+            </div>
           } @else {
             <div class="timeline-tooltip-placeholder">Preview unavailable</div>
           }
-          <p>{{ hoveredTimestamp() }}</p>
+          <p>{{ formatTooltipTimestamp(hoveredTimestamp()) }}</p>
         </div>
       }
       <div class="timeline-legend">
@@ -88,6 +105,53 @@ import type { PreviewFrame, ReviewEvent, TimelineWindow } from '../../../data-ac
       font-size: 0.9rem;
     }
 
+    .timeline-tooltip-loading {
+      display: grid;
+      gap: 0.55rem;
+      justify-items: center;
+    }
+
+    .timeline-tooltip-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100px;
+      display: grid;
+      place-items: center;
+      background: rgba(23, 49, 59, 0.34);
+      backdrop-filter: blur(2px);
+    }
+
+    .timeline-tooltip-image-loading {
+      filter: grayscale(0.7) brightness(0.68);
+    }
+
+    .timeline-spinner {
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: timeline-spinner-rotate 0.8s linear infinite;
+      box-shadow: 0 0 0 1px rgba(23, 49, 59, 0.08);
+    }
+
+    .timeline-loading-label {
+      color: #ffffff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+
+    @keyframes timeline-spinner-rotate {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     .timeline-tooltip p {
       margin: 0;
       padding: 0.55rem 0.7rem;
@@ -136,6 +200,7 @@ export class TimelineCanvasComponent implements AfterViewInit {
   readonly loadedWindow = input<TimelineWindow | null>(null);
   readonly selectedReviewEventId = input<string | null>(null);
   readonly hoveredTimestamp = input<number | null>(null);
+  readonly previewStatus = input<TimelineState['previewStatus']>('idle');
   readonly previewFrame = input<PreviewFrame | null>(null);
   readonly hoverTimestampChange = output<number | null>();
   readonly scrubTimestampChange = output<number | null>();
@@ -144,15 +209,26 @@ export class TimelineCanvasComponent implements AfterViewInit {
 
   @ViewChild('canvas') private canvasRef?: ElementRef<HTMLCanvasElement>;
 
+  private readonly displayedPreviewUrlState = signal<string | null>(null);
+  private readonly pendingPreviewUrlState = signal<string | null>(null);
   private isViewReady = false;
   private isScrubbing = false;
+  private previewLoadToken = 0;
 
   constructor() {
     effect(() => {
       this.loadedWindow();
       this.selectedReviewEventId();
       this.hoveredTimestamp();
-      this.previewFrame();
+      const previewUrl = this.previewFrame()?.imageUrl ?? null;
+      const previewStatus = this.previewStatus();
+
+      if (previewUrl === null && previewStatus !== 'loading') {
+        this.pendingPreviewUrlState.set(null);
+        this.displayedPreviewUrlState.set(null);
+      } else if (previewUrl && previewUrl !== this.displayedPreviewUrlState()) {
+        this.ensurePreviewImageLoaded(previewUrl);
+      }
 
       if (this.isViewReady) {
         queueMicrotask(() => this.draw());
@@ -411,6 +487,59 @@ export class TimelineCanvasComponent implements AfterViewInit {
     return Math.round(
       loadedWindow.requestStartMs + ratio * (loadedWindow.requestEndMs - loadedWindow.requestStartMs)
     );
+  }
+
+  protected formatTooltipTimestamp(timestampMs: number | null): string {
+    if (timestampMs === null) {
+      return '';
+    }
+
+    const date = new Date(timestampMs);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  protected isPreviewLoading(): boolean {
+    return this.previewStatus() === 'loading' || this.pendingPreviewUrlState() !== null;
+  }
+
+  protected displayedPreviewUrl(): string | null {
+    return this.displayedPreviewUrlState();
+  }
+
+  private ensurePreviewImageLoaded(imageUrl: string): void {
+    if (this.pendingPreviewUrlState() === imageUrl) {
+      return;
+    }
+
+    const loadToken = ++this.previewLoadToken;
+    this.pendingPreviewUrlState.set(imageUrl);
+
+    const image = new Image();
+    image.onload = () => {
+      if (loadToken !== this.previewLoadToken) {
+        return;
+      }
+
+      this.displayedPreviewUrlState.set(imageUrl);
+      this.pendingPreviewUrlState.set(null);
+    };
+
+    image.onerror = () => {
+      if (loadToken !== this.previewLoadToken) {
+        return;
+      }
+
+      this.pendingPreviewUrlState.set(null);
+    };
+
+    image.src = imageUrl;
   }
 
   private findNearestReviewEvent(

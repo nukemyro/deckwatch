@@ -51,7 +51,7 @@ export class HttpFrigateAdapter implements FrigateAdapter {
   private readonly runtimeConfig = inject(RUNTIME_CONFIG);
 
   async getCameras(): Promise<CameraSummary[]> {
-    if (!this.baseUrl) {
+    if (!this.hasApiBaseUrl()) {
       return [];
     }
 
@@ -77,32 +77,31 @@ export class HttpFrigateAdapter implements FrigateAdapter {
   }
 
   async getRecordings(input: GetRecordingsInput): Promise<RecordingSegment[]> {
-    if (!this.baseUrl) {
+    if (!this.hasApiBaseUrl()) {
       return [];
     }
 
     const params = new URLSearchParams({
-      camera: input.cameraId,
-      start: this.toEpochSeconds(input.startMs),
-      end: this.toEpochSeconds(input.endMs)
+      after: this.toEpochSeconds(input.startMs),
+      before: this.toEpochSeconds(input.endMs)
     });
 
     const response = await this.fetchJson<FrigateRecordingDto[]>(
-      this.buildUrl(this.resolvePath('recordings'), params)
+      this.buildUrl(this.resolvePath('recordings', input.cameraId), params)
     );
 
     return response.map((recording) => this.mapRecording(input.cameraId, recording));
   }
 
   async getReviewEvents(input: GetReviewEventsInput): Promise<ReviewEvent[]> {
-    if (!this.baseUrl) {
+    if (!this.hasApiBaseUrl()) {
       return [];
     }
 
     const params = new URLSearchParams({
-      camera: input.cameraId,
-      start: this.toEpochSeconds(input.startMs),
-      end: this.toEpochSeconds(input.endMs)
+      cameras: input.cameraId,
+      after: this.toEpochSeconds(input.startMs),
+      before: this.toEpochSeconds(input.endMs)
     });
 
     if (input.types?.length) {
@@ -121,47 +120,24 @@ export class HttpFrigateAdapter implements FrigateAdapter {
   }
 
   async getPreviewFrame(_input: GetPreviewFrameInput): Promise<PreviewFrame | null> {
-    if (!this.baseUrl) {
+    if (!this.hasApiBaseUrl()) {
       return null;
     }
 
-    const params = new URLSearchParams({
-      camera: _input.cameraId,
-      timestamp: this.toEpochSeconds(_input.timestampMs)
-    });
-
-    if (_input.width) {
-      params.set('width', String(_input.width));
-    }
+    const frameTimeSeconds = this.toEpochSeconds(_input.timestampMs);
+    const params = new URLSearchParams();
 
     if (_input.height) {
       params.set('height', String(_input.height));
     }
 
-    if (this.runtimeConfig.deploymentMode === 'proxy') {
-      try {
-        const response = await this.fetchJson<{ imageUrl?: string; width?: number; height?: number }>(
-          this.buildUrl('/api/preview-frame', params)
-        );
-
-        if (response.imageUrl) {
-          return {
-            cameraId: _input.cameraId,
-            timestampMs: _input.timestampMs,
-            imageUrl: this.resolveMediaUrl(response.imageUrl),
-            width: response.width,
-            height: response.height
-          };
-        }
-      } catch {
-        return null;
-      }
-    }
-
     return {
       cameraId: _input.cameraId,
       timestampMs: _input.timestampMs,
-      imageUrl: this.buildUrl('/api/preview-frame', params),
+      imageUrl: this.buildUrl(
+        `/api/${_input.cameraId}/recordings/${frameTimeSeconds}/snapshot.jpg`,
+        params
+      ),
       width: _input.width,
       height: _input.height
     };
@@ -170,7 +146,7 @@ export class HttpFrigateAdapter implements FrigateAdapter {
   async resolvePlaybackSource(
     input: ResolvePlaybackSourceInput
   ): Promise<PlaybackSource | null> {
-    if (!this.baseUrl) {
+    if (!this.hasApiBaseUrl()) {
       return null;
     }
 
@@ -252,17 +228,20 @@ export class HttpFrigateAdapter implements FrigateAdapter {
     return (await response.json()) as T;
   }
 
-  private resolvePath(resource: 'cameras' | 'recordings' | 'review-events'): string {
+  private resolvePath(
+    resource: 'cameras' | 'recordings' | 'review-events',
+    cameraId?: string
+  ): string {
     if (this.runtimeConfig.deploymentMode === 'proxy') {
       if (resource === 'cameras') {
-        return '/api/cameras';
+        return '/api/config';
       }
 
       if (resource === 'recordings') {
-        return '/api/recordings';
+        return `/api/${cameraId}/recordings`;
       }
 
-      return '/api/review-events';
+      return '/api/review';
     }
 
     if (resource === 'cameras') {
@@ -270,7 +249,7 @@ export class HttpFrigateAdapter implements FrigateAdapter {
     }
 
     if (resource === 'recordings') {
-      return '/api/recordings';
+      return `/api/${cameraId}/recordings`;
     }
 
     return '/api/review';
@@ -284,6 +263,10 @@ export class HttpFrigateAdapter implements FrigateAdapter {
   private resolveMediaUrl(path: string): string {
     if (/^https?:\/\//.test(path)) {
       return path;
+    }
+
+    if (this.runtimeConfig.deploymentMode === 'proxy' && !this.runtimeConfig.proxyBaseUrl) {
+      return path.startsWith('/') ? path : `/${path}`;
     }
 
     if (path.startsWith('/')) {
@@ -358,8 +341,19 @@ export class HttpFrigateAdapter implements FrigateAdapter {
     return String(Math.floor(value / 1000));
   }
 
+  private hasApiBaseUrl(): boolean {
+    if (this.runtimeConfig.deploymentMode === 'proxy') {
+      return true;
+    }
+
+    return this.baseUrl.length > 0;
+  }
+
   private get baseUrl(): string {
-    const rawBaseUrl = this.runtimeConfig.proxyBaseUrl || this.runtimeConfig.frigateBaseUrl;
-    return rawBaseUrl.replace(/\/$/, '');
+    if (this.runtimeConfig.deploymentMode === 'proxy') {
+      return (this.runtimeConfig.proxyBaseUrl || '').replace(/\/$/, '');
+    }
+
+    return this.runtimeConfig.frigateBaseUrl.replace(/\/$/, '');
   }
 }

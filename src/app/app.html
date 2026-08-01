@@ -52,6 +52,41 @@
     </div>
   </section>
 
+  <section class="timeline-visualization" aria-label="Frigate connection">
+    <div class="workspace-panel auth-panel">
+      <p class="section-label">Frigate connection</p>
+      <h2>Local network login</h2>
+      <p class="workspace-message">
+        This app now expects Frigate through the Angular dev proxy. Enter your admin credentials
+        in the browser here so the auth cookie is stored for <strong>localhost</strong>.
+      </p>
+
+      <div class="control-bar auth-controls">
+        <label class="date-field">
+          <span>Username</span>
+          <input #frigateUser type="text" autocomplete="username" />
+        </label>
+        <label class="date-field">
+          <span>Password</span>
+          <input #frigatePassword type="password" autocomplete="current-password" />
+        </label>
+        <div class="control-group auth-actions">
+          <button
+            type="button"
+            class="control-button"
+            (click)="loginToFrigate(frigateUser.value, frigatePassword.value); frigatePassword.value = ''"
+          >
+            Log in to Frigate
+          </button>
+        </div>
+      </div>
+
+      @if (authMessage()) {
+        <p class="workspace-message" [class.error]="authStatus() === 'error'">{{ authMessage() }}</p>
+      }
+    </div>
+  </section>
+
   <section class="workspace" aria-label="Camera workspace">
     <div class="workspace-panel">
       <p class="section-label">Camera workspace</p>
@@ -232,6 +267,7 @@
         [loadedWindow]="timelineStore.timelineState().loadedWindow"
         [selectedReviewEventId]="reviewStore.reviewState().selectedEventId"
         [hoveredTimestamp]="timelineStore.timelineState().hoveredTimestampMs"
+        [previewStatus]="timelineStore.timelineState().previewStatus"
         [previewFrame]="timelineStore.timelineState().previewFrame"
         (hoverTimestampChange)="handleTimelineHover($event)"
         (scrubTimestampChange)="handleTimelineScrub($event)"

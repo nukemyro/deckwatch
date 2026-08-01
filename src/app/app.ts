@@ -22,6 +22,8 @@ export class App {
   protected readonly playbackStore = inject(PlaybackStore);
   protected readonly reviewStore = inject(ReviewStore);
   protected readonly timelineStore = inject(TimelineStore);
+  protected readonly authStatus = signal<'unknown' | 'ready' | 'error'>('unknown');
+  protected readonly authMessage = signal('');
 
   protected selectReviewEvent(eventId: string | null): void {
     this.reviewStore.selectEvent(eventId);
@@ -42,6 +44,39 @@ export class App {
 
   constructor() {
     void this.cameraWorkspaceStore.loadCameras();
+  }
+
+  protected async loginToFrigate(user: string, password: string): Promise<void> {
+    this.authStatus.set('unknown');
+    this.authMessage.set('');
+
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': '1'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          user,
+          password
+        })
+      });
+
+      if (!response.ok) {
+        this.authStatus.set('error');
+        this.authMessage.set('Frigate login failed. Check the credentials and try again.');
+        return;
+      }
+
+      this.authStatus.set('ready');
+      this.authMessage.set('Authenticated with Frigate. Reloading camera catalog...');
+      await this.cameraWorkspaceStore.loadCameras();
+    } catch {
+      this.authStatus.set('error');
+      this.authMessage.set('Unable to reach Frigate through the local proxy.');
+    }
   }
 
   protected selectCamera(cameraId: string): void {
