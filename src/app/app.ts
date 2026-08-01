@@ -78,4 +78,20 @@ export class App {
       this.playbackStore.setPlayerStatus('ready');
     }
   }
+
+  protected handleSelectedDateChange(event: Event): void {
+    const nextValue = (event.target as HTMLInputElement | null)?.value;
+
+    if (nextValue) {
+      this.cameraWorkspaceStore.setSelectedDate(nextValue);
+    }
+  }
+
+  protected shiftTimelineWindow(direction: 'backward' | 'forward'): void {
+    this.cameraWorkspaceStore.shiftVisibleRange(direction);
+  }
+
+  protected zoomTimeline(direction: 'in' | 'out'): void {
+    this.cameraWorkspaceStore.zoomVisibleRange(direction);
+  }
 }

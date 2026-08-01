@@ -57,6 +57,35 @@
       <p class="section-label">Camera workspace</p>
       <h2>Available cameras</h2>
 
+      <div class="control-bar" aria-label="Visible range controls">
+        <label class="date-field">
+          <span>Date</span>
+          <input
+            type="date"
+            [value]="cameraWorkspaceStore.cameraWorkspace().selectedDate"
+            (change)="handleSelectedDateChange($event)"
+          />
+        </label>
+
+        <div class="control-group">
+          <button type="button" class="control-button" (click)="shiftTimelineWindow('backward')">
+            Previous window
+          </button>
+          <button type="button" class="control-button" (click)="shiftTimelineWindow('forward')">
+            Next window
+          </button>
+        </div>
+
+        <div class="control-group">
+          <button type="button" class="control-button" (click)="zoomTimeline('out')">
+            Zoom out
+          </button>
+          <button type="button" class="control-button" (click)="zoomTimeline('in')">
+            Zoom in
+          </button>
+        </div>
+      </div>
+
       @if (cameraWorkspaceStore.isLoading()) {
         <p class="workspace-message">Loading camera catalog...</p>
       } @else if (cameraWorkspaceStore.error(); as error) {
@@ -97,6 +126,10 @@
             <dt>Review events</dt>
             <dd>{{ selectedCamera.hasReviewEvents ? 'Available' : 'Unavailable' }}</dd>
           </div>
+          <div>
+            <dt>Zoom level</dt>
+            <dd>{{ cameraWorkspaceStore.cameraWorkspace().zoomLevel }}x</dd>
+          </div>
         </dl>
       } @else {
         <h2>No active camera</h2>
@@ -123,6 +156,10 @@
           <div>
             <dt>Window end</dt>
             <dd>{{ loadedWindow.requestEndMs }}</dd>
+          </div>
+          <div>
+            <dt>Visible duration</dt>
+            <dd>{{ loadedWindow.requestEndMs - loadedWindow.requestStartMs }} ms</dd>
           </div>
           <div>
             <dt>Segments loaded</dt>

@@ -15,12 +15,17 @@ import type {
 } from './frigate-adapter';
 
 type FrigateCameraDto = {
+  friendly_name?: string;
   name?: string;
   enabled?: boolean;
   record?: { enabled?: boolean };
   detect?: { enabled?: boolean };
   review?: { alerts?: { enabled?: boolean }; detections?: { enabled?: boolean } };
-  ui?: { order?: number };
+  ui?: { order?: number; dashboard?: boolean };
+};
+
+type FrigateConfigDto = {
+  cameras?: Record<string, FrigateCameraDto>;
 };
 
 type FrigateRecordingDto = {
@@ -50,7 +55,9 @@ export class HttpFrigateAdapter implements FrigateAdapter {
       return [];
     }
 
-    const response = await this.fetchJson<Record<string, FrigateCameraDto> | CameraSummary[]>(
+    const response = await this.fetchJson<
+      FrigateConfigDto | Record<string, FrigateCameraDto> | CameraSummary[]
+    >(
       this.buildUrl(this.resolvePath('cameras'))
     );
 
@@ -58,9 +65,15 @@ export class HttpFrigateAdapter implements FrigateAdapter {
       return response;
     }
 
-    return Object.entries(response)
+    const cameraMap = 'cameras' in response && response.cameras ? response.cameras : response;
+
+    return Object.entries(cameraMap)
       .map(([cameraId, camera]) => this.mapCamera(cameraId, camera))
-      .sort((left, right) => left.name.localeCompare(right.name));
+      .sort((left, right) => {
+        const orderDelta = (left.order ?? 0) - (right.order ?? 0);
+        return orderDelta !== 0 ? orderDelta : left.name.localeCompare(right.name);
+      })
+      .map(({ order: _order, ...camera }) => camera);
   }
 
   async getRecordings(input: GetRecordingsInput): Promise<RecordingSegment[]> {
@@ -280,14 +293,16 @@ export class HttpFrigateAdapter implements FrigateAdapter {
     return `${this.baseUrl}/${path}`;
   }
 
-  private mapCamera(cameraId: string, camera: FrigateCameraDto): CameraSummary {
+  private mapCamera(cameraId: string, camera: FrigateCameraDto): CameraSummary & { order?: number } {
     return {
       id: cameraId,
-      name: camera.name || cameraId,
+      name: camera.friendly_name || camera.name || cameraId,
       enabled: camera.enabled !== false,
       hasRecordings: camera.record?.enabled !== false,
       hasReviewEvents:
-        camera.review?.alerts?.enabled !== false || camera.review?.detections?.enabled !== false
+        camera.review?.alerts?.enabled !== false || camera.review?.detections?.enabled !== false,
+      order: camera.ui?.order,
+      timezone: undefined
     };
   }
 

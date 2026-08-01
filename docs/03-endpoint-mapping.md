@@ -38,11 +38,14 @@ Transport expectation:
 - Request method: `GET`
 - Input: none
 - Response should contain all enabled cameras relevant to the browsing UI
+- Verified Frigate direct-mode shape: `/api/config` returns a full config object with a top-level `cameras` map, not a camera array
 
 Mapping rules:
 
 - Map Frigate camera key to `CameraSummary.id`.
-- Map display label if present; otherwise fall back to camera key.
+- Prefer `friendly_name` for `CameraSummary.name`; otherwise fall back to `name`, then the camera key.
+- Read direct-mode camera entries from `response.cameras[cameraId]`.
+- Use `ui.order` when present for stable sorting.
 - Derive `hasRecordings` and `hasReviewEvents` conservatively when those capabilities are not explicit.
 
 Failure handling:

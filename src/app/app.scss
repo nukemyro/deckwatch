@@ -140,6 +140,52 @@ h1 {
 	gap: 0.75rem;
 }
 
+.control-bar {
+	display: grid;
+	grid-template-columns: minmax(11rem, 14rem) 1fr 1fr;
+	gap: 0.85rem;
+	margin: 0 0 1rem;
+	align-items: end;
+}
+
+.date-field {
+	display: grid;
+	gap: 0.35rem;
+	color: #6b5642;
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.date-field input {
+	padding: 0.7rem 0.8rem;
+	border: 1px solid rgba(23, 49, 59, 0.14);
+	border-radius: 0.8rem;
+	background: rgba(255, 255, 255, 0.92);
+	color: #17313b;
+	font: inherit;
+}
+
+.control-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+}
+
+.control-button {
+	padding: 0.72rem 0.95rem;
+	border: 1px solid rgba(23, 49, 59, 0.12);
+	border-radius: 999px;
+	background: #f8fbfc;
+	color: #17313b;
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.control-button:hover {
+	background: #edf6fa;
+}
+
 .camera-chip {
 	min-width: 10rem;
 	padding: 0.9rem 1rem;
@@ -286,6 +332,10 @@ code {
 	.status-grid,
 	.roadmap,
 	.workspace {
+		grid-template-columns: 1fr;
+	}
+
+	.control-bar {
 		grid-template-columns: 1fr;
 	}
 
