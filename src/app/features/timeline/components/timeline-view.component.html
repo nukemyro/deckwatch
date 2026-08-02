@@ -1,8 +1,11 @@
 <section class="timeline-view" aria-label="Timeline view">
   <header class="timeline-view-header">
-    @if (showLivePill()) {
-      <div class="badge badge-live">Live</div>
-    }
+    <div class="timeline-header-badges">
+      @if (showLivePill()) {
+        <div class="badge badge-live">Live</div>
+      }
+      <div class="badge" [class]="'badge-' + mqttStatus().tone">{{ mqttStatus().label }}</div>
+    </div>
     <p class="camera-name">{{ selectedCamera()?.name || 'Camera feed' }}</p>
   </header>
 
@@ -72,6 +75,21 @@
             <span class="timeline-mark-rule"></span>
           </div>
         }
+
+        <div class="timeline-marker-layer" aria-label="Timeline markers">
+          @for (marker of markerPositions(); track marker.id) {
+            <button
+              class="timeline-marker-pill"
+              [class.timeline-marker-pill--mqtt]="marker.kind === 'mqtt'"
+              [style.left]="marker.left"
+              [style.width]="marker.width"
+              type="button"
+              [attr.aria-label]="marker.label"
+            >
+              <span class="timeline-marker-pill__label">{{ marker.label }}</span>
+            </button>
+          }
+        </div>
       </div>
     </div>
   </section>

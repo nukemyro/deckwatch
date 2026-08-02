@@ -28,8 +28,13 @@
     "@angular/forms": "^20.3.0",
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
+    "aedes": "^1.1.1",
+    "mosca": "^2.8.3",
+    "mqtt": "^5.15.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "websocket-stream": "^5.5.2",
+    "ws": "^8.21.1",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {

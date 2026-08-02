@@ -18,8 +18,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   color: var(--muted-ink);
   font-size: 0.85rem;
+}
+
+.timeline-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
 .badge {
@@ -33,6 +41,23 @@
 .badge-live {
   color: #ecfff4;
   background: linear-gradient(140deg, #2fce87, #1fa36a);
+}
+
+.badge-connected {
+  color: #e6fcee;
+  background: rgba(47, 206, 135, 0.24);
+  border: 1px solid rgba(47, 206, 135, 0.36);
+}
+
+.badge-live {
+  color: #ecfff4;
+  background: linear-gradient(140deg, #2fce87, #1fa36a);
+}
+
+.badge-offline {
+  color: #ffe8e8;
+  background: rgba(220, 78, 78, 0.2);
+  border: 1px solid rgba(220, 78, 78, 0.34);
 }
 
 .camera-name {
@@ -118,6 +143,39 @@
   display: grid;
   gap: 0;
   padding: 4.5rem 0.9rem;
+  position: relative;
+}
+
+.timeline-marker-layer {
+  position: absolute;
+  inset: 4.5rem 0.9rem auto 0.9rem;
+  pointer-events: none;
+}
+
+.timeline-marker-pill {
+  position: absolute;
+  top: 0.15rem;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(143, 182, 255, 0.9);
+  color: #07131c;
+  padding: 0.16rem 0.42rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.timeline-marker-pill--mqtt {
+  background: rgba(91, 204, 151, 0.92);
+}
+
+.timeline-marker-pill__label {
+  display: block;
 }
 
 .timeline-mark {

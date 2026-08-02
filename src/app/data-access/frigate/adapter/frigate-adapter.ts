@@ -34,6 +34,18 @@ export type PreviewFrame = {
   height?: number;
 };
 
+export type TimelineMarkerEvent = {
+  id: string;
+  cameraId: string;
+  startMs: number;
+  endMs: number;
+  type: string;
+  label?: string;
+  severity?: string;
+  source: 'frigate' | 'reolink-mqtt';
+  confidence?: number;
+};
+
 export type PlaybackSource = {
   cameraId: string;
   requestedTimestampMs: number;
@@ -50,6 +62,7 @@ export type TimelineWindow = {
   loadedEndMs: number;
   segments: RecordingSegment[];
   reviewEvents: ReviewEvent[];
+  timelineMarkerEvents: TimelineMarkerEvent[];
   gaps: Array<{ startMs: number; endMs: number }>;
 };
 

@@ -8,6 +8,7 @@ import { PlaybackStore } from './features/playback/state/playback.store';
 import { ReviewStore } from './features/review-overlay/state/review.store';
 import { TimelineViewComponent } from './features/timeline/components/timeline-view.component';
 import { TimelineStore } from './features/timeline/state/timeline.store';
+import { ReolinkEventService } from './data-access/reolink/reolink-event.service';
 
 @Component({
   selector: 'app-root',
@@ -22,6 +23,7 @@ export class App {
   protected readonly playbackStore = inject(PlaybackStore);
   protected readonly reviewStore = inject(ReviewStore);
   protected readonly timelineStore = inject(TimelineStore);
+  protected readonly reolinkEventService = inject(ReolinkEventService);
   protected readonly authStatus = signal<'unknown' | 'ready' | 'error'>('unknown');
   protected readonly authMessage = signal('');
 
@@ -44,6 +46,7 @@ export class App {
 
   constructor() {
     void this.cameraWorkspaceStore.loadCameras();
+    void this.reolinkEventService.initialize();
   }
 
   protected async loginToFrigate(user: string, password: string): Promise<void> {

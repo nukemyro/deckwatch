@@ -5,8 +5,10 @@ import type {
   PreviewFrame,
   RecordingSegment,
   ReviewEvent,
+  TimelineMarkerEvent,
   TimelineWindow
 } from '../../../data-access/frigate/adapter/frigate-adapter';
+import { ReolinkEventService } from '../../../data-access/reolink/reolink-event.service';
 import type { UiError } from '../../../shared/types/ui-error';
 import { CameraWorkspaceStore } from '../../camera-workspace/state/camera-workspace.store';
 import { ReviewStore } from '../../review-overlay/state/review.store';
@@ -23,6 +25,7 @@ export type TimelineState = {
   previewFrame: PreviewFrame | null;
   densityMode: TimelineDensityMode;
   reviewEventCounts: Record<string, number>;
+  markerEventCounts: Record<string, number>;
   error: UiError | null;
 };
 
@@ -36,6 +39,7 @@ export const initialTimelineState: TimelineState = {
   previewFrame: null,
   densityMode: 'medium',
   reviewEventCounts: {},
+  markerEventCounts: {},
   error: null
 };
 
@@ -44,12 +48,16 @@ export class TimelineStore {
   private readonly frigateAdapter = inject(FRIGATE_ADAPTER);
   private readonly cameraWorkspaceStore = inject(CameraWorkspaceStore);
   private readonly reviewStore = inject(ReviewStore);
+  private readonly reolinkEventService = inject(ReolinkEventService);
   private readonly previewDebounceMs = 150;
 
   private readonly state = signal<TimelineState>(initialTimelineState);
   private lastRequestKey: string | null = null;
   private lastPreviewKey: string | null = null;
   private previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private currentCameraId: string | null = null;
+  private currentRangeStartMs: number | null = null;
+  private currentRangeEndMs: number | null = null;
   private readonly pendingPreviewTimestamp = computed(
     () => this.state().pendingPreviewTimestampMs
   );
@@ -60,7 +68,13 @@ export class TimelineStore {
     effect(() => {
       const workspace = this.cameraWorkspaceStore.cameraWorkspace();
 
-      if (!workspace.selectedCameraId || !workspace.visibleRangeStartMs || !workspace.visibleRangeEndMs) {
+      if (
+        !workspace.selectedCameraId ||
+        workspace.visibleRangeStartMs === null ||
+        workspace.visibleRangeStartMs === undefined ||
+        workspace.visibleRangeEndMs === null ||
+        workspace.visibleRangeEndMs === undefined
+      ) {
         return;
       }
 
@@ -75,10 +89,33 @@ export class TimelineStore {
       }
 
       this.lastRequestKey = requestKey;
+      this.currentCameraId = workspace.selectedCameraId;
+      this.currentRangeStartMs = workspace.visibleRangeStartMs;
+      this.currentRangeEndMs = workspace.visibleRangeEndMs;
       void this.loadRecordingWindow(
         workspace.selectedCameraId,
         workspace.visibleRangeStartMs,
         workspace.visibleRangeEndMs
+      );
+    });
+
+    this.reolinkEventService.events$.subscribe((event) => {
+      if (!this.currentCameraId || this.currentRangeStartMs === null || this.currentRangeEndMs === null) {
+        return;
+      }
+
+      if (event.cameraId !== this.currentCameraId) {
+        return;
+      }
+
+      if (event.timestampMs < this.currentRangeStartMs || event.timestampMs > this.currentRangeEndMs) {
+        return;
+      }
+
+      void this.loadRecordingWindow(
+        this.currentCameraId,
+        this.currentRangeStartMs,
+        this.currentRangeEndMs
       );
     });
 
@@ -115,20 +152,28 @@ export class TimelineStore {
     }));
 
     try {
-      const [segments, reviewEvents] = await Promise.all([
+      const [segments, reviewEvents, mqttEvents] = await Promise.all([
         this.frigateAdapter.getRecordings({
           cameraId,
           startMs,
           endMs
         }),
-        this.reviewStore.loadReviewEvents(cameraId, startMs, endMs)
+        this.reviewStore.loadReviewEvents(cameraId, startMs, endMs),
+        this.reolinkEventService.getEvents({
+          cameraId,
+          startMs,
+          endMs
+        })
       ]);
+
+      const markerEvents = this.mergeMarkerEvents(reviewEvents, mqttEvents);
 
       this.state.update((state) => ({
         ...state,
         windowStatus: 'ready',
-        densityMode: this.deriveDensityMode(segments, reviewEvents),
+        densityMode: this.deriveDensityMode(segments, reviewEvents, mqttEvents),
         reviewEventCounts: this.countReviewEvents(reviewEvents),
+        markerEventCounts: this.countMarkerEvents(markerEvents),
         loadedWindow: {
           requestStartMs: startMs,
           requestEndMs: endMs,
@@ -136,6 +181,7 @@ export class TimelineStore {
           loadedEndMs: endMs,
           segments: this.normalizeSegments(segments, startMs, endMs),
           reviewEvents,
+          timelineMarkerEvents: markerEvents,
           gaps: this.calculateGaps(segments, startMs, endMs)
         }
       }));
@@ -288,11 +334,48 @@ export class TimelineStore {
     }, {});
   }
 
+  private countMarkerEvents(markerEvents: TimelineMarkerEvent[]): Record<string, number> {
+    return markerEvents.reduce<Record<string, number>>((counts, markerEvent) => {
+      counts[markerEvent.type] = (counts[markerEvent.type] || 0) + 1;
+      return counts;
+    }, {});
+  }
+
+  private mergeMarkerEvents(
+    reviewEvents: ReviewEvent[],
+    mqttEvents: Array<{ id: string; cameraId: string; timestampMs: number; durationMs?: number; type: string; label?: string; confidence?: number; source: 'reolink-mqtt' }>
+  ): TimelineMarkerEvent[] {
+    const reviewMarkers: TimelineMarkerEvent[] = reviewEvents.map((reviewEvent) => ({
+      id: reviewEvent.id,
+      cameraId: reviewEvent.cameraId,
+      startMs: reviewEvent.startMs,
+      endMs: reviewEvent.endMs,
+      type: reviewEvent.type,
+      label: reviewEvent.label,
+      severity: reviewEvent.severity,
+      source: 'frigate'
+    }));
+
+    const mqttMarkers: TimelineMarkerEvent[] = mqttEvents.map((mqttEvent) => ({
+      id: mqttEvent.id,
+      cameraId: mqttEvent.cameraId,
+      startMs: mqttEvent.timestampMs,
+      endMs: mqttEvent.durationMs ? mqttEvent.timestampMs + mqttEvent.durationMs : mqttEvent.timestampMs,
+      type: mqttEvent.type,
+      label: mqttEvent.label,
+      confidence: mqttEvent.confidence,
+      source: 'reolink-mqtt'
+    }));
+
+    return [...reviewMarkers, ...mqttMarkers].sort((left, right) => left.startMs - right.startMs);
+  }
+
   private deriveDensityMode(
     segments: RecordingSegment[],
-    reviewEvents: ReviewEvent[]
+    reviewEvents: ReviewEvent[],
+    mqttEvents: Array<{ id: string; cameraId: string; timestampMs: number; durationMs?: number; type: string; label?: string; confidence?: number; source: 'reolink-mqtt' }>
   ): TimelineDensityMode {
-    const score = segments.length + reviewEvents.length;
+    const score = segments.length + reviewEvents.length + mqttEvents.length;
 
     if (score > 120) {
       return 'coarse';

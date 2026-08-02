@@ -10,6 +10,7 @@ import {
   viewChild
 } from '@angular/core';
 
+import { ReolinkEventService } from '../../../data-access/reolink/reolink-event.service';
 import { CameraWorkspaceStore } from '../../camera-workspace/state/camera-workspace.store';
 import { PlaybackStore } from '../../playback/state/playback.store';
 import { TimelineStore } from '../state/timeline.store';
@@ -31,6 +32,7 @@ export class TimelineViewComponent implements AfterViewInit, OnDestroy {
   protected readonly timelineStore = inject(TimelineStore);
   protected readonly playbackStore = inject(PlaybackStore);
   protected readonly cameraWorkspaceStore = inject(CameraWorkspaceStore);
+  protected readonly reolinkEventService = inject(ReolinkEventService);
 
   protected readonly mode = signal<TimelineViewMode>('preview');
   protected readonly selectedTimestampMs = signal<number | null>(null);
@@ -45,6 +47,7 @@ export class TimelineViewComponent implements AfterViewInit, OnDestroy {
   protected readonly previewStatus = computed(() => this.timelineStore.timelineState().previewStatus);
   protected readonly playbackState = computed(() => this.playbackStore.playbackState());
   protected readonly selectedCamera = computed(() => this.cameraWorkspaceStore.selectedCamera());
+  protected readonly timelineMarkers = computed(() => this.loadedWindow()?.timelineMarkerEvents ?? []);
 
   protected readonly selectedTimestampLabel = computed(() => {
     const timestampMs = this.selectedTimestampMs();
@@ -78,6 +81,56 @@ export class TimelineViewComponent implements AfterViewInit, OnDestroy {
     }
 
     return selectedTimestampMs >= loadedWindow.requestEndMs - this.liveTimestampToleranceMs;
+  });
+
+  protected readonly mqttStatus = computed(() => {
+    const connected = this.reolinkEventService.isConnected();
+    const markerCount = this.timelineMarkers().filter((marker) => marker.source === 'reolink-mqtt').length;
+    const lastActivityAt = this.reolinkEventService.getLastActivityAt();
+    const recentActivity = Date.now() - lastActivityAt < 15_000;
+
+    if (!connected) {
+      return { label: 'MQTT offline', tone: 'offline' as const };
+    }
+
+    if (markerCount > 0 && recentActivity) {
+      return { label: `MQTT live • ${markerCount}`, tone: 'live' as const };
+    }
+
+    if (recentActivity) {
+      return { label: 'MQTT active', tone: 'connected' as const };
+    }
+
+    return { label: 'MQTT connected', tone: 'connected' as const };
+  });
+
+  protected readonly markerPositions = computed(() => {
+    const loadedWindow = this.loadedWindow();
+
+    if (!loadedWindow) {
+      return [] as Array<{ id: string; left: string; width: string; label: string; kind: string }>;
+    }
+
+    const rangeMs = Math.max(loadedWindow.requestEndMs - loadedWindow.requestStartMs, 1);
+
+    return this.timelineMarkers().map((marker) => {
+      const leftRatio = Math.min(
+        Math.max((marker.startMs - loadedWindow.requestStartMs) / rangeMs, 0),
+        1
+      );
+      const widthRatio = Math.min(
+        Math.max((marker.endMs - marker.startMs) / Math.max(rangeMs / 24, 1), 0.04),
+        0.2
+      );
+
+      return {
+        id: marker.id,
+        left: `${leftRatio * 100}%`,
+        width: `${widthRatio * 100}%`,
+        label: marker.label || marker.type,
+        kind: marker.source === 'reolink-mqtt' ? 'mqtt' : 'review'
+      };
+    });
   });
 
   protected readonly timelineMarks = computed(() => {

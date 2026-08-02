@@ -5,5 +5,13 @@
   "authMode": "cookie",
   "previewFramesEnabled": true,
   "reviewOverlayEnabled": true,
-  "requestTimeoutMs": 15000
+  "requestTimeoutMs": 15000,
+  "mqtt": {
+    "enabled": true,
+    "brokerUrl": "ws://broker.hivemq.com:8000/mqtt",
+    "brokerPort": 8000,
+    "useTls": false,
+    "clientId": "deckwatch-browser",
+    "topicPattern": "reolink/+/events"
+  }
 }
