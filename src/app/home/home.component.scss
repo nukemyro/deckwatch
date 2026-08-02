@@ -1,0 +1,365 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.shell {
+  min-height: 100vh;
+  padding: 4rem 1.5rem 3rem;
+  background:
+    radial-gradient(circle at top left, rgba(255, 177, 153, 0.32), transparent 30%),
+    radial-gradient(circle at top right, rgba(127, 179, 213, 0.28), transparent 28%),
+    linear-gradient(180deg, #f6efe8 0%, #eef2f4 52%, #dce7e2 100%);
+  color: #17313b;
+}
+
+.hero,
+.status-grid,
+.roadmap,
+.workspace,
+.timeline-visualization {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.hero {
+  margin-bottom: 2.5rem;
+}
+
+.deckwatch-logo {
+  display: block;
+  width: clamp(11rem, 28vw, 16rem);
+  height: auto;
+  margin: 0 0 1.1rem;
+  background: transparent;
+}
+
+.eyebrow,
+.section-label {
+  margin: 0 0 0.75rem;
+  color: #876447;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(3rem, 6vw, 5.75rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.lede {
+  max-width: 50rem;
+  margin: 1.25rem 0 0;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: rgba(23, 49, 59, 0.84);
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.status-card,
+.roadmap > div {
+  border: 1px solid rgba(23, 49, 59, 0.12);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 50px rgba(51, 72, 78, 0.08);
+}
+
+.status-card {
+  padding: 1.25rem;
+}
+
+.status-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+
+.status-card p,
+.roadmap li {
+  margin: 0;
+  line-height: 1.65;
+  color: rgba(23, 49, 59, 0.78);
+}
+
+.status-card .meta {
+  margin-top: 0.65rem;
+  font-size: 0.92rem;
+  color: rgba(23, 49, 59, 0.62);
+}
+
+.accent-card {
+  background: linear-gradient(180deg, rgba(255, 247, 236, 0.9), rgba(255, 255, 255, 0.7));
+}
+
+.roadmap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+.roadmap > div {
+  padding: 1.25rem;
+}
+
+.workspace-panel {
+  padding: 1.25rem;
+  border: 1px solid rgba(23, 49, 59, 0.12);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 50px rgba(51, 72, 78, 0.08);
+}
+
+.workspace-panel h2 {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+}
+
+.workspace-message {
+  margin: 0;
+  line-height: 1.6;
+  color: rgba(23, 49, 59, 0.78);
+}
+
+.workspace-message.error {
+  color: #9d3d2c;
+}
+
+.camera-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.control-bar {
+  display: grid;
+  grid-template-columns: minmax(11rem, 14rem) 1fr 1fr;
+  gap: 0.85rem;
+  margin: 0 0 1rem;
+  align-items: end;
+}
+
+.date-field {
+  display: grid;
+  gap: 0.35rem;
+  color: #6b5642;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.date-field input {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(23, 49, 59, 0.14);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #17313b;
+  font: inherit;
+}
+
+.control-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.control-button {
+  padding: 0.72rem 0.95rem;
+  border: 1px solid rgba(23, 49, 59, 0.12);
+  border-radius: 999px;
+  background: #f8fbfc;
+  color: #17313b;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.control-button:hover {
+  background: #edf6fa;
+}
+
+.camera-chip {
+  min-width: 10rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(23, 49, 59, 0.12);
+  border-radius: 1rem;
+  background: #fff8f1;
+  color: #17313b;
+  text-align: left;
+  cursor: pointer;
+}
+
+.camera-chip span,
+.camera-chip small {
+  display: block;
+}
+
+.camera-chip span {
+  font-weight: 700;
+}
+
+.camera-chip small {
+  margin-top: 0.25rem;
+  color: rgba(23, 49, 59, 0.64);
+}
+
+.camera-chip.selected {
+  border-color: rgba(132, 87, 49, 0.42);
+  background: linear-gradient(180deg, #fff3df, #f3ece1);
+}
+
+.review-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.review-item {
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(23, 49, 59, 0.12);
+  border-radius: 1rem;
+  background: #f7fbfc;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-item span,
+.review-item small {
+  display: block;
+}
+
+.review-item span {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.review-item small {
+  margin-top: 0.25rem;
+  color: rgba(23, 49, 59, 0.64);
+}
+
+.review-item.selected {
+  border-color: rgba(73, 123, 145, 0.42);
+  background: linear-gradient(180deg, #edf6fa, #f8fbfc);
+}
+
+.event-buckets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.event-buckets span {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(79, 143, 176, 0.12);
+  color: #27566b;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.timeline-visualization {
+  margin-top: 2.5rem;
+}
+
+.auth-panel {
+  margin-top: 0;
+}
+
+.auth-controls {
+  grid-template-columns: minmax(11rem, 14rem) minmax(11rem, 14rem) 1fr;
+}
+
+.auth-actions {
+  align-items: end;
+}
+
+.playback-panel .playback-error {
+  margin-top: 1rem;
+}
+
+.video-shell {
+  margin: 0 0 1rem;
+  border: 1px solid rgba(23, 49, 59, 0.12);
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #081116;
+}
+
+.playback-video {
+  display: block;
+  width: 100%;
+  max-height: 28rem;
+  background: #081116;
+}
+
+.breakable {
+  word-break: break-all;
+}
+
+.detail-panel dl {
+  margin: 0;
+}
+
+.detail-panel div + div {
+  margin-top: 0.8rem;
+}
+
+.detail-panel dt {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #876447;
+}
+
+.detail-panel dd {
+  margin: 0.25rem 0 0;
+  color: rgba(23, 49, 59, 0.82);
+}
+
+.roadmap ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.roadmap li + li {
+  margin-top: 0.55rem;
+}
+
+code {
+  font-size: 0.95em;
+  color: #294b57;
+}
+
+@media (max-width: 820px) {
+  .status-grid,
+  .roadmap,
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .control-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .shell {
+    padding-top: 3rem;
+  }
+}

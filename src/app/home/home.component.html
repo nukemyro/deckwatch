@@ -1,0 +1,253 @@
+<main class="shell">
+  <section class="hero">
+    <p class="eyebrow">Frigate Historical Browser</p>
+    <img class="deckwatch-logo" src="/branding/logo-transparent.png?v=2" alt="Deckwatch logo" />
+    <h1>{{ title() }}</h1>
+    <p class="lede">
+      An Angular workspace for camera-first historical browsing, timeline scrubbing, preview
+      lookups, and playback orchestration over Frigate-backed recordings.
+    </p>
+  </section>
+
+  <section class="status-grid" aria-label="Project status">
+    <article class="status-card">
+      <h2>Architecture</h2>
+      <p>System context, delivery phases, and deployment modes are documented.</p>
+    </article>
+
+    <article class="status-card">
+      <h2>Frontend shape</h2>
+      <p>Standalone Angular app with feature, core, shared, and data-access boundaries.</p>
+    </article>
+
+    <article class="status-card">
+      <h2>Next build slice</h2>
+      <p>Camera workspace, timeline projection, and playback source resolution.</p>
+    </article>
+
+    <article class="status-card accent-card">
+      <h2>Runtime mode</h2>
+      <p>{{ runtimeConfig.deploymentMode }} via {{ runtimeConfig.authMode }} auth</p>
+      <p class="meta">Base URL: {{ runtimeConfig.frigateBaseUrl || 'not configured yet' }}</p>
+    </article>
+  </section>
+
+  <section class="roadmap">
+    <div>
+      <p class="section-label">Initial slices</p>
+      <ul>
+        <li>Runtime configuration bootstrap and adapter shell</li>
+        <li>Camera selection state and active time window</li>
+        <li>Canvas-driven timeline and playback handoff</li>
+      </ul>
+    </div>
+
+    <div>
+      <p class="section-label">Source documents</p>
+      <ul>
+        <li>Architecture plan in docs/01-architectural.md</li>
+        <li>Implementation spec in docs/02-implementation-spec.md</li>
+        <li>Endpoint mapping and delivery backlog in docs/03 and docs/04</li>
+        <li>Runtime config served from public/runtime-config.json</li>
+      </ul>
+    </div>
+  </section>
+  @if (showLoginPanel()) {
+    <section class="timeline-visualization" aria-label="Frigate connection">
+      <div class="workspace-panel auth-panel">
+        <p class="section-label">Frigate connection</p>
+        <h2>Local network login</h2>
+        <p class="workspace-message">
+          This app now expects Frigate through the Angular dev proxy. Enter your admin credentials
+          in the browser here so the auth cookie is stored for <strong>localhost</strong>.
+        </p>
+
+        <div class="control-bar auth-controls">
+          <label class="date-field">
+            <span>Username</span>
+            <input #frigateUser type="text" autocomplete="username" />
+          </label>
+          <label class="date-field">
+            <span>Password</span>
+            <input #frigatePassword type="password" autocomplete="current-password" />
+          </label>
+          <div class="control-group auth-actions">
+            <button
+              type="button"
+              class="control-button"
+              (click)="loginToFrigate(frigateUser.value, frigatePassword.value); frigatePassword.value = ''"
+            >
+              Log in to Frigate
+            </button>
+          </div>
+        </div>
+
+        @if (authMessage()) {
+          <p class="workspace-message" [class.error]="authStatus() === 'error'">{{ authMessage() }}</p>
+        }
+      </div>
+    </section>
+  }
+
+  <section class="workspace" aria-label="Camera workspace">
+    <div class="workspace-panel">
+      <p class="section-label">Camera workspace</p>
+      <h2>Available cameras</h2>
+
+      <div class="control-bar" aria-label="Visible range controls">
+        <label class="date-field">
+          <span>Date</span>
+          <input type="date" [value]="cameraWorkspaceStore.cameraWorkspace().selectedDate"
+            (change)="handleSelectedDateChange($event)" />
+        </label>
+
+        <div class="control-group">
+          <button type="button" class="control-button" (click)="shiftTimelineWindow('backward')">
+            Previous window
+          </button>
+          <button type="button" class="control-button" (click)="shiftTimelineWindow('forward')">
+            Next window
+          </button>
+        </div>
+
+        <div class="control-group">
+          <button type="button" class="control-button" (click)="zoomTimeline('out')">
+            Zoom out
+          </button>
+          <button type="button" class="control-button" (click)="zoomTimeline('in')">
+            Zoom in
+          </button>
+        </div>
+      </div>
+
+      @if (cameraWorkspaceStore.isLoading()) {
+      <p class="workspace-message">Loading camera catalog...</p>
+      } @else if (cameraWorkspaceStore.error(); as error) {
+      <p class="workspace-message error">{{ error.message }}</p>
+      } @else if (cameraWorkspaceStore.cameras().length === 0) {
+      <p class="workspace-message">No cameras available yet. Configure Frigate and runtime-config.json.</p>
+      } @else {
+      <div class="camera-list">
+        @for (camera of cameraWorkspaceStore.cameras(); track camera.id) {
+        <button type="button" class="camera-chip"
+          [class.selected]="cameraWorkspaceStore.selectedCamera()?.id === camera.id" (click)="selectCamera(camera.id)">
+          <span>{{ camera.name }}</span>
+          <small>{{ camera.id }}</small>
+        </button>
+        }
+      </div>
+      }
+    </div>
+
+    <div class="workspace-panel detail-panel">
+      <p class="section-label">Current selection</p>
+      @if (cameraWorkspaceStore.selectedCamera(); as selectedCamera) {
+      <h2>{{ selectedCamera.name }}</h2>
+      <dl>
+        <div>
+          <dt>Camera ID</dt>
+          <dd>{{ selectedCamera.id }}</dd>
+        </div>
+        <div>
+          <dt>Recordings</dt>
+          <dd>{{ selectedCamera.hasRecordings ? 'Available' : 'Unavailable' }}</dd>
+        </div>
+        <div>
+          <dt>Review events</dt>
+          <dd>{{ selectedCamera.hasReviewEvents ? 'Available' : 'Unavailable' }}</dd>
+        </div>
+        <div>
+          <dt>Zoom level</dt>
+          <dd>{{ cameraWorkspaceStore.cameraWorkspace().zoomLevel }}x</dd>
+        </div>
+      </dl>
+      } @else {
+      <h2>No active camera</h2>
+      <p class="workspace-message">A default selection will appear once camera metadata is available.</p>
+      }
+    </div>
+  </section>
+
+  <section class="workspace timeline-preview" aria-label="Timeline metadata preview">
+    <div class="workspace-panel">
+      <p class="section-label">Timeline metadata</p>
+      <h2>Recording window</h2>
+
+      @if (timelineStore.timelineState().windowStatus === 'loading') {
+      <p class="workspace-message">Loading recording segments for the selected day...</p>
+      } @else if (timelineStore.timelineState().error; as error) {
+      <p class="workspace-message error">{{ error.message }}</p>
+      } @else if (timelineStore.timelineState().loadedWindow; as loadedWindow) {
+      <dl>
+        <div>
+          <dt>Window start</dt>
+          <dd>{{ loadedWindow.requestStartMs }}</dd>
+        </div>
+        <div>
+          <dt>Window end</dt>
+          <dd>{{ loadedWindow.requestEndMs }}</dd>
+        </div>
+        <div>
+          <dt>Visible duration</dt>
+          <dd>{{ loadedWindow.requestEndMs - loadedWindow.requestStartMs }} ms</dd>
+        </div>
+        <div>
+          <dt>Segments loaded</dt>
+          <dd>{{ loadedWindow.segments.length }}</dd>
+        </div>
+        <div>
+          <dt>Review events loaded</dt>
+          <dd>{{ loadedWindow.reviewEvents.length }}</dd>
+        </div>
+        <div>
+          <dt>Detected gaps</dt>
+          <dd>{{ loadedWindow.gaps.length }}</dd>
+        </div>
+        <div>
+          <dt>Density mode</dt>
+          <dd>{{ timelineStore.timelineState().densityMode }}</dd>
+        </div>
+        <div>
+          <dt>Hovered timestamp</dt>
+          <dd>{{ timelineStore.timelineState().hoveredTimestampMs || 'none' }}</dd>
+        </div>
+        <div>
+          <dt>Scrub timestamp</dt>
+          <dd>{{ timelineStore.timelineState().scrubTimestampMs || 'none' }}</dd>
+        </div>
+      </dl>
+      } @else {
+      <p class="workspace-message">Select a camera to load recording metadata.</p>
+      }
+    </div>
+
+    <div class="workspace-panel detail-panel">
+      <p class="section-label">Review overlay</p>
+      <h2>Loaded review events</h2>
+
+      @if (reviewStore.reviewState().status === 'loading') {
+      <p class="workspace-message">Loading review markers for the active window...</p>
+      } @else if (reviewStore.reviewState().error; as error) {
+      <p class="workspace-message error">{{ error.message }}</p>
+      } @else if (reviewStore.reviewState().events.length === 0) {
+      <p class="workspace-message">No review events are available for the active day window.</p>
+      } @else {
+      <div class="event-buckets">
+        @for (bucket of reviewStore.reviewState().countsByType | keyvalue; track bucket.key) {
+        <span>{{ bucket.key }}: {{ bucket.value }}</span>
+        }
+      </div>
+      <div class="review-list">
+        @for (event of reviewStore.reviewState().events.slice(0, 6); track event.id) {
+        <button type="button" class="review-item"
+          [class.selected]="reviewStore.reviewState().selectedEventId === event.id"
+          (click)="selectReviewEvent(event.id)">
+          <span>{{ event.type }}</span>
+          <small>{{ event.label || 'unlabeled event' }}</small>
+        </button>
+        }
+      </div>
+      }
+    </div>
+  </section>
+</main>

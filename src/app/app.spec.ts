@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { FRIGATE_ADAPTER } from './data-access/frigate/adapter/frigate-adapter.token';
 import type { FrigateAdapter } from './data-access/frigate/adapter/frigate-adapter';
@@ -28,6 +29,7 @@ describe('App', () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
+        provideRouter([]),
         { provide: RUNTIME_CONFIG, useValue: runtimeConfig },
         { provide: FRIGATE_ADAPTER, useValue: frigateAdapterStub }
       ]
@@ -40,10 +42,10 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render title', () => {
+  it('should render router outlet', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('DeckWatch');
+    expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 });
