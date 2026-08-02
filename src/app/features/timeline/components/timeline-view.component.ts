@@ -281,10 +281,26 @@ export class TimelineViewComponent implements AfterViewInit, OnDestroy {
   }
 
   private setSelectionFromInteraction(timestampMs: number): void {
-    this.selectedTimestampMs.set(timestampMs);
+    const loadedWindow = this.loadedWindow();
+
+    if (!loadedWindow) {
+      return;
+    }
+
+    const maxInteractiveTimestampMs = this.resolveMaxInteractiveTimestampMs(loadedWindow.requestEndMs);
+    const clampedTimestampMs = Math.min(
+      Math.max(timestampMs, loadedWindow.requestStartMs),
+      maxInteractiveTimestampMs
+    );
+
+    this.selectedTimestampMs.set(clampedTimestampMs);
     this.mode.set('preview');
     this.pushTimelineSelection();
     this.scheduleIdleToPlay();
+  }
+
+  private resolveMaxInteractiveTimestampMs(requestEndMs: number): number {
+    return Math.min(requestEndMs, Date.now());
   }
 
   private scheduleIdleToPlay(): void {
