@@ -1,27 +1,41 @@
 <section class="timeline-view" aria-label="Timeline view">
   <header class="timeline-view-header">
-    @if (showLivePill()) {
-      <div class="badge badge-live">Live</div>
-    }
+    <div class="timeline-header-badges">
+      @if (showLivePill()) {
+        <div class="badge badge-live">Live</div>
+      }
+      <div class="badge badge-phase">{{ scrubPhase() }}</div>
+      @if (showDebugBadges()) {
+        <div class="badge badge-debug" aria-live="polite">{{ playbackDebugBadge() }}</div>
+        <div class="badge badge-debug" aria-live="polite">{{ prefetchDebugBadge() }}</div>
+      }
+    </div>
     <p class="camera-name">{{ selectedCamera()?.name || 'Camera feed' }}</p>
   </header>
 
-  <article class="content-stage" aria-label="Camera content">
-    @if (mode() === 'preview' || !hasVideoSource()) {
-      @if (previewFrame(); as frame) {
+  <article
+    class="content-stage"
+    [class.content-stage--scrubbing]="scrubPhase() !== 'STATIONARY'"
+    aria-label="Camera content"
+  >
+    @if (showPreviewSurface()) {
+      @if (activePreviewImageUrl(); as previewImageUrl) {
         <img
           class="preview-image"
-          [src]="frame.imageUrl"
+          [src]="previewImageUrl"
           [alt]="'Preview at ' + selectedTimestampSubtitle()"
         />
+      } @else if (isVideoRequestPending()) {
+        <div class="preview-placeholder preview-placeholder--silent" aria-hidden="true"></div>
       } @else {
         <div class="preview-placeholder">Preparing preview...</div>
       }
     }
 
-    @if (mode() === 'video' && playbackState().resolvedSource; as source) {
+    @if (showVideoSurface() && playbackState().resolvedSource; as source) {
       <video
         class="playback-video"
+        [class.playback-video--hidden]="isVideoRequestPending()"
         controls
         autoplay
         muted
@@ -47,7 +61,19 @@
     </div>
   </article>
 
-  <section class="timeline-stage" aria-label="History timeline">
+  <section
+    class="timeline-stage"
+    [class.timeline-stage--active-scrub]="scrubPhase() === 'ACTIVE_SCRUB'"
+    [class.timeline-stage--velocity-loop]="scrubPhase() === 'VELOCITY_LOOP'"
+    [class.timeline-stage--settled-seek]="scrubPhase() === 'SETTLED_SEEK'"
+    aria-label="History timeline"
+  >
+    @if (futureDisabledPercent() > 0) {
+      <div class="future-disabled-zone" [style.height.%]="futureDisabledPercent()" aria-hidden="true">
+        <span>Future disabled</span>
+      </div>
+    }
+
     <div class="timeline-center-indicator" aria-hidden="true"></div>
     <div class="timeline-center-label" aria-live="polite">{{ selectedTimestampSubtitle() }}</div>
 
@@ -59,7 +85,7 @@
       [attr.aria-valuenow]="selectedTimestampMs() || 0"
       [attr.aria-valuetext]="selectedTimestampSubtitle()"
       [attr.aria-valuemin]="loadedWindow()?.requestStartMs || 0"
-      [attr.aria-valuemax]="loadedWindow()?.requestEndMs || 0"
+      [attr.aria-valuemax]="maxSelectableTimestampMs()"
       (scroll)="handleTimelineScroll($event)"
       (pointerdown)="handleTimelinePointerDown()"
       (pointerup)="handleTimelinePointerUp()"

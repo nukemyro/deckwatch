@@ -180,6 +180,19 @@ export class TimelineStore {
     }));
   }
 
+  async getPreviewFrameAt(cameraId: string, timestampMs: number): Promise<PreviewFrame | null> {
+    try {
+      return await this.frigateAdapter.getPreviewFrame({
+        cameraId,
+        timestampMs,
+        width: 320,
+        height: 180
+      });
+    } catch {
+      return null;
+    }
+  }
+
   private async loadPreviewFrame(cameraId: string, timestampMs: number): Promise<void> {
     this.state.update((state) => ({
       ...state,
