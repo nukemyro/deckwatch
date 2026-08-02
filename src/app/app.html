@@ -238,13 +238,42 @@
       } @else if (reviewStore.reviewState().events.length === 0) {
         <p class="workspace-message">No review events are available for the active day window.</p>
       } @else {
+        <div class="review-source-filter" role="group" aria-label="Review source filter">
+          <button
+            type="button"
+            class="source-filter-chip"
+            [class.selected]="reviewStore.reviewState().sourceFilter === 'all'"
+            (click)="setReviewSourceFilter('all')"
+          >
+            All ({{ reviewStore.sourceCounts().all }})
+          </button>
+          <button
+            type="button"
+            class="source-filter-chip"
+            [class.selected]="reviewStore.reviewState().sourceFilter === 'frigate'"
+            (click)="setReviewSourceFilter('frigate')"
+          >
+            Frigate ({{ reviewStore.sourceCounts().frigate }})
+          </button>
+          <button
+            type="button"
+            class="source-filter-chip"
+            [class.selected]="reviewStore.reviewState().sourceFilter === 'reolink-mqtt'"
+            (click)="setReviewSourceFilter('reolink-mqtt')"
+          >
+            MQTT ({{ reviewStore.sourceCounts()['reolink-mqtt'] }})
+          </button>
+        </div>
         <div class="event-buckets">
           @for (bucket of reviewStore.reviewState().countsByType | keyvalue; track bucket.key) {
             <span>{{ bucket.key }}: {{ bucket.value }}</span>
           }
         </div>
+        @if (reviewStore.filteredEvents().length === 0) {
+          <p class="workspace-message">No events match the selected source filter.</p>
+        }
         <div class="review-list">
-          @for (event of reviewStore.reviewState().events.slice(0, 6); track event.id) {
+          @for (event of reviewStore.filteredEvents(); track event.id) {
             <button
               type="button"
               class="review-item"
@@ -253,6 +282,7 @@
             >
               <span>{{ event.type }}</span>
               <small>{{ event.label || 'unlabeled event' }}</small>
+              <small class="event-source">{{ event.source === 'reolink-mqtt' ? 'MQTT broker event' : 'Frigate review event' }}</small>
             </button>
           }
         </div>

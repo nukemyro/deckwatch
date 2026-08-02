@@ -33,7 +33,7 @@ describe('ReolinkEventService', () => {
   });
 
   it('exposes a reactive connection state for the UI layer', () => {
-    service.connectionState.set(true);
+    (service as unknown as { connectionState: { set(value: boolean): void } }).connectionState.set(true);
 
     expect(service.isConnected()).toBeTrue();
   });

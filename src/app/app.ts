@@ -5,7 +5,7 @@ import { RouterOutlet } from '@angular/router';
 import { RUNTIME_CONFIG } from './core/config/runtime-config.token';
 import { CameraWorkspaceStore } from './features/camera-workspace/state/camera-workspace.store';
 import { PlaybackStore } from './features/playback/state/playback.store';
-import { ReviewStore } from './features/review-overlay/state/review.store';
+import { ReviewStore, type ReviewSourceFilter } from './features/review-overlay/state/review.store';
 import { TimelineViewComponent } from './features/timeline/components/timeline-view.component';
 import { TimelineStore } from './features/timeline/state/timeline.store';
 import { ReolinkEventService } from './data-access/reolink/reolink-event.service';
@@ -35,8 +35,8 @@ export class App {
     }
 
     const selectedEvent = this.reviewStore
-      .reviewState()
-      .events.find((reviewEvent) => reviewEvent.id === eventId);
+      .filteredEvents()
+      .find((reviewEvent) => reviewEvent.id === eventId);
 
     if (selectedEvent) {
       this.playbackStore.setTargetTimestamp(selectedEvent.startMs);
@@ -101,6 +101,10 @@ export class App {
 
   protected handleTimelineReviewEventSelect(eventId: string | null): void {
     this.reviewStore.selectEvent(eventId);
+  }
+
+  protected setReviewSourceFilter(sourceFilter: ReviewSourceFilter): void {
+    this.reviewStore.setSourceFilter(sourceFilter);
   }
 
   protected handleVideoLoadStart(): void {

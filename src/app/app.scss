@@ -227,6 +227,37 @@ h1 {
 .review-list {
 	display: grid;
 	gap: 0.75rem;
+	max-height: 23rem;
+	overflow-y: auto;
+	padding-right: 0.25rem;
+}
+
+.review-source-filter {
+	display: inline-flex;
+	gap: 0.4rem;
+	margin-bottom: 0.8rem;
+	padding: 0.2rem;
+	border-radius: 999px;
+	background: rgba(29, 69, 86, 0.08);
+}
+
+.source-filter-chip {
+	border: 0;
+	padding: 0.3rem 0.75rem;
+	border-radius: 999px;
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	color: rgba(23, 49, 59, 0.74);
+	background: transparent;
+	cursor: pointer;
+}
+
+.source-filter-chip.selected {
+	background: #ffffff;
+	color: #1c4f63;
+	box-shadow: 0 1px 4px rgba(23, 49, 59, 0.14);
 }
 
 .review-item {
@@ -251,6 +282,14 @@ h1 {
 .review-item small {
 	margin-top: 0.25rem;
 	color: rgba(23, 49, 59, 0.64);
+}
+
+.review-item .event-source {
+	text-transform: uppercase;
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	color: rgba(23, 49, 59, 0.58);
 }
 
 .review-item.selected {
