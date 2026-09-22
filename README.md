@@ -42,13 +42,22 @@ DeckWatch is an Angular frontend for historical video exploration on top of Frig
 
 ## Local development
 
+Before starting the app, create your local config files from the tracked examples and fill in your own Frigate server details (these files are gitignored so your real network details never get committed):
+
+```bash
+cp proxy.conf.example.json proxy.conf.json
+cp public/runtime-config.example.json public/runtime-config.json
+```
+
+Then edit `proxy.conf.json` and `public/runtime-config.json` to point at your Frigate instance.
+
 Start the development server:
 
 ```bash
 npm start
 ```
 
-The development server is configured with `proxy.conf.json` to forward Frigate auth, API, and media requests to `https://frigate.example.local:8971`.
+The development server uses `proxy.conf.json` to forward Frigate auth, API, and media requests to your configured Frigate origin.
 
 Build the application:
 

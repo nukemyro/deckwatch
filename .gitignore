@@ -38,6 +38,10 @@ testem.log
 /typings
 __screenshots__/
 
+# Local network / deployment config (copy from *.example.json and fill in real values)
+/proxy.conf.json
+/public/runtime-config.json
+
 # System files
 .DS_Store
 Thumbs.db
